@@ -23,3 +23,6 @@ data-json-by-name name:
   set -euxo pipefail
   key=`just find-by-name {{name}}`
   lua tojson.lua `just file $key | sed 's/.lua//'` | jq '.[] | { metalcost: .metalcost, energycost: .energycost, buildtime: (.buildtime/100) }'
+
+run: init
+  go run *.go
