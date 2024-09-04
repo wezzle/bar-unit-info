@@ -17,6 +17,7 @@
             lua
             lua54Packages.dkjson
             jq
+            go
           ];
         };
       }
