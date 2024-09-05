@@ -29,17 +29,26 @@ func getModOptions(L *lua.LState) int {
 }
 
 type (
-	UnitRef        = string
-	GridCol        []UnitRef
-	GridRow        []GridCol
-	Group          []GridRow
-	Constructor    = UnitRef
-	UnitGrid       map[Constructor]Group
+	UnitRef     = string
+	GridCol     []UnitRef
+	GridRow     []GridCol
+	Group       []GridRow
+	Constructor = UnitRef
+	UnitGrid    map[Constructor]Group
+	Lab         = UnitRef
+	LabGrid     map[Lab]GridRow
+	WeaponDef   struct {
+		Range int
+	}
 	UnitProperties struct {
-		metalcost    int
-		energycost   int
-		buildtime    int
-		buildOptions []UnitRef
+		MetalCost     int
+		EnergyCost    int
+		Buildtime     int
+		BuildOptions  []UnitRef
+		Health        int
+		SightDistance int
+		Speed         float64
+		WeaponDefs    []WeaponDef
 	}
 	Translations struct {
 		Units struct {
@@ -61,6 +70,7 @@ var (
 	debug             *widgets.List
 	translations      Translations
 	unitGrid          UnitGrid
+	labGrid           LabGrid
 	constructorPage   *ConstructorPage
 )
 
@@ -97,7 +107,54 @@ func loadTranslations(lang string) (translations Translations) {
 	return
 }
 
-func loadUnitGrid() UnitGrid {
+func loadUnitGrid(v *lua.LTable) UnitGrid {
+	grid := make(UnitGrid)
+
+	v.ForEach(func(k lua.LValue, v lua.LValue) {
+		constructor := Constructor(k.String())
+		grid[constructor] = make(Group, 4)
+
+		v.(*lua.LTable).ForEach(func(k lua.LValue, group lua.LValue) {
+			groupIndex := indexFromLValue(k)
+			grid[constructor][groupIndex] = make(GridRow, 3)
+			group.(*lua.LTable).ForEach(func(k lua.LValue, units lua.LValue) {
+				rowIndex := indexFromLValue(k)
+				grid[constructor][groupIndex][rowIndex] = make(GridCol, 4)
+				units.(*lua.LTable).ForEach(func(k lua.LValue, unitName lua.LValue) {
+					colIndex := indexFromLValue(k)
+					grid[constructor][groupIndex][rowIndex][colIndex] = UnitRef(unitName.String())
+				})
+			})
+		})
+	})
+
+	return grid
+}
+
+func loadLabGrid(v *lua.LTable) LabGrid {
+	grid := make(LabGrid)
+
+	v.ForEach(func(k lua.LValue, v lua.LValue) {
+		lab := Constructor(k.String())
+		grid[lab] = make(GridRow, 3)
+		for i := range grid[lab] {
+			grid[lab][i] = make(GridCol, 4)
+		}
+
+		rowIndex := 0
+		v.(*lua.LTable).ForEach(func(k lua.LValue, unitName lua.LValue) {
+			colIndex := indexFromLValue(k)
+			if colIndex%4 == 0 && colIndex != 0 {
+				rowIndex = rowIndex + 1
+			}
+			grid[lab][rowIndex][colIndex%4] = UnitRef(unitName.String())
+		})
+	})
+
+	return grid
+}
+
+func loadGridLayouts() {
 	L := lua.NewState()
 
 	springTable := lua.LTable{}
@@ -113,30 +170,10 @@ func loadUnitGrid() UnitGrid {
 		panic(err)
 	}
 
-	lv := L.Get(-1)
+	lv := L.Get(-1).(*lua.LTable)
 
-	unitGrid := make(UnitGrid)
-
-	v := lv.(*lua.LTable).RawGetString("UnitGrids")
-	v.(*lua.LTable).ForEach(func(k lua.LValue, v lua.LValue) {
-		constructor := Constructor(k.String())
-		unitGrid[constructor] = make(Group, 4)
-
-		v.(*lua.LTable).ForEach(func(k lua.LValue, group lua.LValue) {
-			groupIndex := indexFromLValue(k)
-			unitGrid[constructor][groupIndex] = make(GridRow, 3)
-			group.(*lua.LTable).ForEach(func(k lua.LValue, units lua.LValue) {
-				rowIndex := indexFromLValue(k)
-				unitGrid[constructor][groupIndex][rowIndex] = make(GridCol, 4)
-				units.(*lua.LTable).ForEach(func(k lua.LValue, unitName lua.LValue) {
-					colIndex := indexFromLValue(k)
-					unitGrid[constructor][groupIndex][rowIndex][colIndex] = UnitRef(unitName.String())
-				})
-			})
-		})
-	})
-
-	return unitGrid
+	unitGrid = loadUnitGrid(lv.RawGetString("UnitGrids").(*lua.LTable))
+	labGrid = loadLabGrid(lv.RawGetString("LabGrids").(*lua.LTable))
 }
 
 func findUnitPropertiesFile(ref UnitRef) (string, error) {
@@ -181,6 +218,9 @@ func loadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	metalcost, _ := strconv.Atoi(data.RawGetString("metalcost").String())
 	energycost, _ := strconv.Atoi(data.RawGetString("energycost").String())
 	buildtime, _ := strconv.Atoi(data.RawGetString("buildtime").String())
+	health, _ := strconv.Atoi(data.RawGetString("health").String())
+	sightdistance, _ := strconv.Atoi(data.RawGetString("sightdistance").String())
+	speed, _ := strconv.ParseFloat(data.RawGetString("speed").String(), 64)
 
 	bo := data.RawGetString("buildoptions")
 	var buildOptions []UnitRef
@@ -192,10 +232,13 @@ func loadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	}
 
 	properties := UnitProperties{
-		metalcost:    metalcost,
-		energycost:   energycost,
-		buildtime:    buildtime,
-		buildOptions: buildOptions,
+		MetalCost:     metalcost,
+		EnergyCost:    energycost,
+		Buildtime:     buildtime,
+		BuildOptions:  buildOptions,
+		Health:        health,
+		SightDistance: sightdistance,
+		Speed:         speed,
 	}
 	unitPropertyCache[ref] = properties
 	return &properties, nil
@@ -215,7 +258,7 @@ type Page interface {
 func main() {
 	// Load globals
 	translations = loadTranslations("en")
-	unitGrid = loadUnitGrid()
+	loadGridLayouts()
 
 	// Start terminal UI
 	if err := ui.Init(); err != nil {
@@ -227,6 +270,8 @@ func main() {
 	var activePage Page
 	constructorPage = createConstructorPage()
 	activePage = constructorPage
+	// activePage = createUnitPage("corkarg", nil)
+	// activePage.Render()
 
 	// Handle event loop
 	uiEvents := ui.PollEvents()

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -16,7 +17,8 @@ type ConstructorPage struct {
 	content *widgets.Paragraph
 	grid    *ui.Grid
 
-	constructorList []Constructor
+	unitList []UnitRef
+	regexp   *regexp.Regexp
 
 	previousKey         string
 	previousSelectedRow int
@@ -28,7 +30,7 @@ func (p *ConstructorPage) Render() {
 
 func (p *ConstructorPage) HandleEvents(e ui.Event) (Page, error) {
 	switch e.ID {
-	case "q", "<C-c>":
+	case "<C-c>":
 		return nil, fmt.Errorf("exit")
 	case "j", "<Down>":
 		p.list.ScrollDown()
@@ -51,17 +53,17 @@ func (p *ConstructorPage) HandleEvents(e ui.Event) (Page, error) {
 	case "G", "<End>":
 		p.list.ScrollBottom()
 	case "<Enter>":
-		selectedConstructor := UnitRef(p.constructorList[p.list.SelectedRow])
+		selectedConstructor := UnitRef(p.regexp.ReplaceAllString(p.unitList[p.list.SelectedRow], ""))
 		return createBuildGridPage(selectedConstructor), nil
 	case "<Resize>":
 		payload := e.Payload.(ui.Resize)
 		p.grid.SetRect(0, 0, payload.Width, payload.Height)
 		ui.Clear()
-		ui.Render(p.grid)
+		p.Render()
 	}
 
 	if p.previousSelectedRow != p.list.SelectedRow {
-		selectedConstructor := UnitRef(p.constructorList[p.list.SelectedRow])
+		selectedConstructor := UnitRef(p.regexp.ReplaceAllString(p.unitList[p.list.SelectedRow], ""))
 		img := loadImage(selectedConstructor)
 		p.image.Image = img
 		p.content.Text = fmt.Sprintf("%s\n\n%s", translations.Units.Names[selectedConstructor], translations.Units.Descriptions[selectedConstructor])
@@ -85,31 +87,45 @@ func createConstructorPage() (page *ConstructorPage) {
 	debug.WrapText = true
 
 	page = &ConstructorPage{}
-	page.constructorList = make([]Constructor, 0)
+	page.regexp = regexp.MustCompile(`\[(Unit|Lab)] `)
+
+	page.unitList = make([]UnitRef, 0)
 	for constructor := range unitGrid {
 		if strings.Contains(constructor, "lvl") {
 			continue
 		}
 		properties, err := loadUnitProperties(constructor)
-		if err != nil || properties.buildOptions == nil {
+		if err != nil || properties.BuildOptions == nil {
 			log.Printf("Skipping %s, no properties\n", constructor)
 			continue
 		}
-		page.constructorList = append(page.constructorList, constructor)
+		page.unitList = append(page.unitList, fmt.Sprintf("[Unit] %s", constructor))
 	}
 
-	sort.Strings(page.constructorList)
+	for lab := range labGrid {
+		if strings.Contains(lab, "lvl") {
+			continue
+		}
+		properties, err := loadUnitProperties(lab)
+		if err != nil || properties.BuildOptions == nil {
+			log.Printf("Skipping %s, no properties\n", lab)
+			continue
+		}
+		page.unitList = append(page.unitList, fmt.Sprintf("[Lab] %s", lab))
+	}
+
+	sort.Strings(page.unitList)
 
 	page.list = widgets.NewList()
 	page.list.Title = "Constructors"
 	page.list.Rows = make([]string, 0)
-	for index, constructor := range page.constructorList {
-		page.list.Rows = append(page.list.Rows, fmt.Sprintf("[%02d] %s", index, constructor))
+	for _, constructor := range page.unitList {
+		page.list.Rows = append(page.list.Rows, constructor)
 	}
 	page.list.TextStyle = ui.NewStyle(ui.ColorYellow)
 	page.list.WrapText = false
 
-	firstConstructor := UnitRef(page.constructorList[0])
+	firstConstructor := UnitRef(page.regexp.ReplaceAllString(page.unitList[0], ""))
 
 	img := loadImage(firstConstructor)
 	page.image = widgets.NewImage(img)

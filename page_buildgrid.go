@@ -19,32 +19,104 @@ type BuildGridPage struct {
 }
 
 func (p *BuildGridPage) Render() {
-	ui.Render(p.tabPane)
+	if p.tabPane != nil {
+		ui.Render(p.tabPane)
+	}
 	ui.Render(p.grid)
 }
 
 func (p *BuildGridPage) HandleEvents(e ui.Event) (Page, error) {
+	var selectedUnit [2]int
+	hasSelectedUnit := false
 	switch e.ID {
-	case "q", "<C-c>":
+	case "<C-c>":
 		return nil, fmt.Errorf("exit")
 	case "z":
-		p.tabPane.ActiveTabIndex = 0
+		if p.tabPane != nil {
+			p.tabPane.ActiveTabIndex = 0
+		} else {
+			selectedUnit[0] = 2
+			selectedUnit[1] = 0
+			hasSelectedUnit = true
+		}
 	case "x":
-		p.tabPane.ActiveTabIndex = 1
+		if p.tabPane != nil {
+			p.tabPane.ActiveTabIndex = 1
+		} else {
+			selectedUnit[0] = 2
+			selectedUnit[1] = 1
+			hasSelectedUnit = true
+		}
 	case "c":
-		p.tabPane.ActiveTabIndex = 2
+		if p.tabPane != nil {
+			p.tabPane.ActiveTabIndex = 2
+		} else {
+			selectedUnit[0] = 2
+			selectedUnit[1] = 2
+			hasSelectedUnit = true
+		}
 	case "v":
-		p.tabPane.ActiveTabIndex = 3
+		if p.tabPane != nil {
+			p.tabPane.ActiveTabIndex = 3
+		} else {
+			selectedUnit[0] = 2
+			selectedUnit[1] = 3
+			hasSelectedUnit = true
+		}
+	case "q":
+		selectedUnit[0] = 0
+		selectedUnit[1] = 0
+		hasSelectedUnit = true
+	case "w":
+		selectedUnit[0] = 0
+		selectedUnit[1] = 1
+		hasSelectedUnit = true
+	case "e":
+		selectedUnit[0] = 0
+		selectedUnit[1] = 2
+		hasSelectedUnit = true
+	case "r":
+		selectedUnit[0] = 0
+		selectedUnit[1] = 3
+		hasSelectedUnit = true
+	case "a":
+		selectedUnit[0] = 1
+		selectedUnit[1] = 0
+		hasSelectedUnit = true
+	case "s":
+		selectedUnit[0] = 1
+		selectedUnit[1] = 1
+		hasSelectedUnit = true
+	case "d":
+		selectedUnit[0] = 1
+		selectedUnit[1] = 2
+		hasSelectedUnit = true
+	case "f":
+		selectedUnit[0] = 1
+		selectedUnit[1] = 3
+		hasSelectedUnit = true
 	case "<Escape>":
 		return constructorPage, nil
 	case "<Resize>":
 		payload := e.Payload.(ui.Resize)
 		p.grid.SetRect(0, 0, payload.Width, payload.Height)
 		ui.Clear()
-		ui.Render(p.grid)
+		p.Render()
 	}
 
-	if p.tabPane.ActiveTabIndex != p.lastActiveTab {
+	if hasSelectedUnit {
+		var activeIndex int
+		if p.tabPane != nil {
+			activeIndex = p.tabPane.ActiveTabIndex
+		} else {
+			activeIndex = 0
+		}
+		units := p.group[activeIndex]
+		unit := units[selectedUnit[0]][selectedUnit[1]]
+		return createUnitPage(unit, p), nil
+	}
+
+	if p.tabPane != nil && p.tabPane.ActiveTabIndex != p.lastActiveTab {
 		p.grid.Set(
 			ui.NewRow(1.0,
 				p.tabs[p.tabPane.ActiveTabIndex],
@@ -73,61 +145,83 @@ func createBuildItem(ref UnitRef) interface{} {
 	return i
 }
 
-func createBuildGridPage(ref UnitRef) (page *BuildGridPage) {
-	page = &BuildGridPage{
+func createPane(rows GridRow) *ui.Grid {
+	pane := ui.NewGrid()
+	pane.Set(
+		ui.NewRow(1.0/3,
+			ui.NewCol(1.0/4, createBuildItem(rows[0][0])),
+			ui.NewCol(1.0/4, createBuildItem(rows[0][1])),
+			ui.NewCol(1.0/4, createBuildItem(rows[0][2])),
+			ui.NewCol(1.0/4, createBuildItem(rows[0][3])),
+		),
+		ui.NewRow(1.0/3,
+			ui.NewCol(1.0/4, createBuildItem(rows[1][0])),
+			ui.NewCol(1.0/4, createBuildItem(rows[1][1])),
+			ui.NewCol(1.0/4, createBuildItem(rows[1][2])),
+			ui.NewCol(1.0/4, createBuildItem(rows[1][3])),
+		),
+		ui.NewRow(1.0/3,
+			ui.NewCol(1.0/4, createBuildItem(rows[2][0])),
+			ui.NewCol(1.0/4, createBuildItem(rows[2][1])),
+			ui.NewCol(1.0/4, createBuildItem(rows[2][2])),
+			ui.NewCol(1.0/4, createBuildItem(rows[2][3])),
+		),
+	)
+	return pane
+}
+
+func createBuildGridPage(ref UnitRef) (p *BuildGridPage) {
+	p = &BuildGridPage{
 		ref: ref,
 	}
 
 	var err error
-	page.properties, err = loadUnitProperties(ref)
+	p.properties, err = loadUnitProperties(ref)
 	if err != nil {
 		panic(err)
 	}
 
-	page.group = unitGrid[ref]
-
 	termWidth, termHeight := ui.TerminalDimensions()
 
-	page.tabPane = widgets.NewTabPane("(Z) Economy", "(X) Combat", "(C) Utility", "(V) Build")
-	page.tabPane.SetRect(0, 1, termWidth, 4)
-	page.tabPane.Border = true
+	var ok bool
+	if p.group, ok = unitGrid[ref]; ok {
+		p.tabPane = widgets.NewTabPane("(Z) Economy", "(X) Combat", "(C) Utility", "(V) Build")
+		p.tabPane.SetRect(0, 1, termWidth, 4)
+		p.tabPane.Border = true
 
-	page.tabs = make([]*ui.Grid, 4)
-	for i := range 4 {
-		tab := ui.NewGrid()
-		tab.Set(
-			ui.NewRow(1.0/3,
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][0][0])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][0][1])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][0][2])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][0][3])),
-			),
-			ui.NewRow(1.0/3,
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][1][0])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][1][1])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][1][2])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][1][3])),
-			),
-			ui.NewRow(1.0/3,
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][2][0])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][2][1])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][2][2])),
-				ui.NewCol(1.0/4, createBuildItem(page.group[i][2][3])),
-			),
-		)
-		page.tabs[i] = tab
+		p.tabs = make([]*ui.Grid, 4)
+		for i := range 4 {
+			tab := createPane(p.group[i])
+			p.tabs[i] = tab
+		}
+	} else {
+		p.group = make(Group, 1)
+		p.group[0] = labGrid[ref]
+
+		p.tabs = make([]*ui.Grid, 1)
+		p.tabs[0] = createPane(p.group[0])
 	}
 
-	page.grid = ui.NewGrid()
-	page.grid.SetRect(0, 5, termWidth, termHeight-5)
-	page.grid.Set(
+	var activeIndex int
+	if p.tabPane != nil {
+		activeIndex = p.tabPane.ActiveTabIndex
+	} else {
+		activeIndex = 0
+	}
+
+	p.grid = ui.NewGrid()
+	p.grid.SetRect(0, 5, termWidth, termHeight-5)
+	p.grid.Set(
 		ui.NewRow(1.0,
-			page.tabs[page.tabPane.ActiveTabIndex],
+			p.tabs[activeIndex],
 		),
 		// ui.NewRow(0.2, debug),
 	)
-	page.lastActiveTab = page.tabPane.ActiveTabIndex
 
-	page.Render()
+	if p.tabPane != nil {
+		p.lastActiveTab = p.tabPane.ActiveTabIndex
+	}
+
+	p.Render()
 	return
 }
