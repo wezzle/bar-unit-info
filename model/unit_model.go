@@ -35,7 +35,7 @@ var (
 	}
 )
 
-func NewUnitModel(ref util.UnitRef, mainModel *MainModel) Unit {
+func NewUnitModel(ref util.UnitRef, mainModel *MainModel) *Unit {
 	m := Unit{}
 	m.ref = ref
 	m.mainModel = mainModel
@@ -55,7 +55,7 @@ func NewUnitModel(ref util.UnitRef, mainModel *MainModel) Unit {
 	m.sightRange = progress.New(progress.WithSolidFill("#C6C8C9"), progress.WithoutPercentage())
 	m.speed = progress.New(progress.WithSolidFill("#1175AE"), progress.WithoutPercentage())
 
-	return m
+	return &m
 }
 
 type Unit struct {
@@ -76,11 +76,11 @@ type Unit struct {
 	speed      progress.Model
 }
 
-func (m Unit) Init() tea.Cmd {
+func (m *Unit) Init() tea.Cmd {
 	return nil
 }
 
-func (m Unit) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Unit) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -93,7 +93,7 @@ func (m Unit) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Unit) RenderBar(labelWidth int, label string, progress string, maxValueWidth int, value string) string {
+func (m *Unit) RenderBar(labelWidth int, label string, progress string, maxValueWidth int, value string) string {
 	v := value
 	for range maxValueWidth - len(value) {
 		v = " " + v
@@ -106,15 +106,15 @@ func (m Unit) RenderBar(labelWidth int, label string, progress string, maxValueW
 	return padding.Render(lipgloss.JoinHorizontal(lipgloss.Top, bar...))
 }
 
-func (m Unit) PercentageWithBase(value int, base float64) float64 {
+func (m *Unit) PercentageWithBase(value int, base float64) float64 {
 	return m.PercentageWithBaseF(float64(value), base)
 }
 
-func (m Unit) PercentageWithBaseF(value float64, base float64) float64 {
+func (m *Unit) PercentageWithBaseF(value float64, base float64) float64 {
 	return min(value/base, 100.0) / 100
 }
 
-func (m Unit) View() string {
+func (m *Unit) View() string {
 	var sections []string
 
 	var titleRow []string

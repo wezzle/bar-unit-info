@@ -103,14 +103,14 @@ type Table struct {
 	mainModel *MainModel
 }
 
-func (m Table) Init() tea.Cmd {
+func (m *Table) Init() tea.Cmd {
 	return nil
 }
 
-func (m Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	sortStringColumn := -1
-	sortIntColumn := 0
+	sortIntColumn := -1
 	reverse := false
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -191,6 +191,6 @@ func (m Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Table) View() string {
+func (m *Table) View() string {
 	return baseStyle.Render(m.Table.View()) + "\n  " + m.Table.HelpView() + "\n"
 }

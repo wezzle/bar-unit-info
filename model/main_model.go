@@ -1,17 +1,20 @@
 package model
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 func NewMainModel() MainModel {
 	m := MainModel{}
-	m.TableModel = NewTableModel(&m)
+	t := NewTableModel(&m)
+	m.TableModel = &t
 	m.activeModel = m.TableModel
 	return m
 }
 
 type MainModel struct {
-	TableModel Table
-	UnitModel  Unit
+	TableModel *Table
+	UnitModel  *Unit
 
 	activeModel tea.Model
 }
