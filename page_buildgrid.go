@@ -5,6 +5,7 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/wezzle/bar-unit-info/util"
 )
 
 type BuildGridPage struct {
@@ -12,9 +13,9 @@ type BuildGridPage struct {
 	tabPane *widgets.TabPane
 	tabs    []*ui.Grid
 
-	ref           UnitRef
-	properties    *UnitProperties
-	group         Group
+	ref           util.UnitRef
+	properties    *util.UnitProperties
+	group         util.Group
 	lastActiveTab int
 }
 
@@ -135,17 +136,17 @@ func createPlaceholder(title string) *widgets.Paragraph {
 	return placeholder
 }
 
-func createBuildItem(ref UnitRef) interface{} {
+func createBuildItem(ref util.UnitRef) interface{} {
 	if ref == "" {
 		return widgets.NewParagraph()
 	}
-	img := loadImage(ref)
+	img := util.LoadImage(ref)
 	i := widgets.NewImage(img)
-	i.Title = translations.Units.Names[ref]
+	i.Title = util.Translations.Units.Names[ref]
 	return i
 }
 
-func createPane(rows GridRow) *ui.Grid {
+func createPane(rows util.GridRow) *ui.Grid {
 	pane := ui.NewGrid()
 	pane.Set(
 		ui.NewRow(1.0/3,
@@ -170,13 +171,13 @@ func createPane(rows GridRow) *ui.Grid {
 	return pane
 }
 
-func createBuildGridPage(ref UnitRef) (p *BuildGridPage) {
+func createBuildGridPage(ref util.UnitRef) (p *BuildGridPage) {
 	p = &BuildGridPage{
 		ref: ref,
 	}
 
 	var err error
-	p.properties, err = loadUnitProperties(ref)
+	p.properties, err = util.LoadUnitProperties(ref)
 	if err != nil {
 		panic(err)
 	}
@@ -184,7 +185,7 @@ func createBuildGridPage(ref UnitRef) (p *BuildGridPage) {
 	termWidth, termHeight := ui.TerminalDimensions()
 
 	var ok bool
-	if p.group, ok = unitGrid[ref]; ok {
+	if p.group, ok = util.UnitGrid[ref]; ok {
 		p.tabPane = widgets.NewTabPane("(Z) Economy", "(X) Combat", "(C) Utility", "(V) Build")
 		p.tabPane.SetRect(0, 1, termWidth, 4)
 		p.tabPane.Border = true
@@ -195,8 +196,8 @@ func createBuildGridPage(ref UnitRef) (p *BuildGridPage) {
 			p.tabs[i] = tab
 		}
 	} else {
-		p.group = make(Group, 1)
-		p.group[0] = labGrid[ref]
+		p.group = make(util.Group, 1)
+		p.group[0] = util.LabGrid[ref]
 
 		p.tabs = make([]*ui.Grid, 1)
 		p.tabs[0] = createPane(p.group[0])

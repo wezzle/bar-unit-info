@@ -7,6 +7,7 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/wezzle/bar-unit-info/util"
 )
 
 type UnitPage struct {
@@ -23,8 +24,8 @@ type UnitPage struct {
 	sightRange *widgets.Gauge
 	speed      *widgets.Gauge
 
-	ref        UnitRef
-	properties *UnitProperties
+	ref        util.UnitRef
+	properties *util.UnitProperties
 
 	parentPage *BuildGridPage
 }
@@ -50,22 +51,22 @@ func (p *UnitPage) HandleEvents(e ui.Event) (Page, error) {
 	return nil, nil
 }
 
-func createUnitPage(ref UnitRef, parent *BuildGridPage) (p *UnitPage) {
+func createUnitPage(ref util.UnitRef, parent *BuildGridPage) (p *UnitPage) {
 	p = &UnitPage{
 		parentPage: parent,
 		ref:        ref,
 	}
 
 	var err error
-	p.properties, err = loadUnitProperties(ref)
+	p.properties, err = util.LoadUnitProperties(ref)
 	if err != nil {
 		panic(err)
 	}
 
 	p.hero = widgets.NewParagraph()
-	p.hero.Text = fmt.Sprintf("%s\n\n%s", translations.Units.Names[ref], translations.Units.Descriptions[ref])
+	p.hero.Text = fmt.Sprintf("%s\n\n%s", util.NameForRef(ref), util.DescriptionForRef(ref))
 
-	img := loadImage(ref)
+	img := util.LoadImage(ref)
 	p.image = widgets.NewImage(img)
 	p.image.Title = "Preview"
 

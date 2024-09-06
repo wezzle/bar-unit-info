@@ -9,6 +9,7 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/wezzle/bar-unit-info/util"
 )
 
 type ConstructorPage struct {
@@ -17,7 +18,7 @@ type ConstructorPage struct {
 	content *widgets.Paragraph
 	grid    *ui.Grid
 
-	unitList []UnitRef
+	unitList []util.UnitRef
 	regexp   *regexp.Regexp
 
 	previousKey         string
@@ -53,7 +54,7 @@ func (p *ConstructorPage) HandleEvents(e ui.Event) (Page, error) {
 	case "G", "<End>":
 		p.list.ScrollBottom()
 	case "<Enter>":
-		selectedConstructor := UnitRef(p.regexp.ReplaceAllString(p.unitList[p.list.SelectedRow], ""))
+		selectedConstructor := util.UnitRef(p.regexp.ReplaceAllString(p.unitList[p.list.SelectedRow], ""))
 		return createBuildGridPage(selectedConstructor), nil
 	case "<Resize>":
 		payload := e.Payload.(ui.Resize)
@@ -63,10 +64,10 @@ func (p *ConstructorPage) HandleEvents(e ui.Event) (Page, error) {
 	}
 
 	if p.previousSelectedRow != p.list.SelectedRow {
-		selectedConstructor := UnitRef(p.regexp.ReplaceAllString(p.unitList[p.list.SelectedRow], ""))
-		img := loadImage(selectedConstructor)
+		selectedConstructor := util.UnitRef(p.regexp.ReplaceAllString(p.unitList[p.list.SelectedRow], ""))
+		img := util.LoadImage(selectedConstructor)
 		p.image.Image = img
-		p.content.Text = fmt.Sprintf("%s\n\n%s", translations.Units.Names[selectedConstructor], translations.Units.Descriptions[selectedConstructor])
+		p.content.Text = fmt.Sprintf("%s\n\n%s", util.Translations.Units.Names[selectedConstructor], util.Translations.Units.Descriptions[selectedConstructor])
 		p.previousSelectedRow = p.list.SelectedRow
 	}
 
@@ -89,12 +90,12 @@ func createConstructorPage() (page *ConstructorPage) {
 	page = &ConstructorPage{}
 	page.regexp = regexp.MustCompile(`\[(Unit|Lab)] `)
 
-	page.unitList = make([]UnitRef, 0)
-	for constructor := range unitGrid {
+	page.unitList = make([]util.UnitRef, 0)
+	for constructor := range util.UnitGrid {
 		if strings.Contains(constructor, "lvl") {
 			continue
 		}
-		properties, err := loadUnitProperties(constructor)
+		properties, err := util.LoadUnitProperties(constructor)
 		if err != nil || properties.BuildOptions == nil {
 			log.Printf("Skipping %s, no properties\n", constructor)
 			continue
@@ -102,11 +103,11 @@ func createConstructorPage() (page *ConstructorPage) {
 		page.unitList = append(page.unitList, fmt.Sprintf("[Unit] %s", constructor))
 	}
 
-	for lab := range labGrid {
+	for lab := range util.LabGrid {
 		if strings.Contains(lab, "lvl") {
 			continue
 		}
-		properties, err := loadUnitProperties(lab)
+		properties, err := util.LoadUnitProperties(lab)
 		if err != nil || properties.BuildOptions == nil {
 			log.Printf("Skipping %s, no properties\n", lab)
 			continue
@@ -125,9 +126,9 @@ func createConstructorPage() (page *ConstructorPage) {
 	page.list.TextStyle = ui.NewStyle(ui.ColorYellow)
 	page.list.WrapText = false
 
-	firstConstructor := UnitRef(page.regexp.ReplaceAllString(page.unitList[0], ""))
+	firstConstructor := page.regexp.ReplaceAllString(page.unitList[0], "")
 
-	img := loadImage(firstConstructor)
+	img := util.LoadImage(firstConstructor)
 	page.image = widgets.NewImage(img)
 	page.image.Title = "Preview"
 
@@ -136,7 +137,7 @@ func createConstructorPage() (page *ConstructorPage) {
 	page.grid.SetRect(0, 0, termWidth, termHeight)
 
 	page.content = widgets.NewParagraph()
-	page.content.Text = fmt.Sprintf("%s\n\n%s", translations.Units.Names[firstConstructor], translations.Units.Descriptions[firstConstructor])
+	page.content.Text = fmt.Sprintf("%s\n\n%s", util.NameForRef(firstConstructor), util.DescriptionForRef(firstConstructor))
 
 	page.grid.Set(
 		ui.NewRow(0.8,
