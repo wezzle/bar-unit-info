@@ -2,6 +2,7 @@ package util
 
 import (
 	"strconv"
+	"strings"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -120,6 +121,7 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	lv := L.Get(-1)
 	data := lv.(*lua.LTable).RawGetString(ref).(*lua.LTable)
 
+	// Simple stats
 	metalcost, _ := strconv.Atoi(data.RawGetString("metalcost").String())
 	energycost, _ := strconv.Atoi(data.RawGetString("energycost").String())
 	buildtime, _ := strconv.Atoi(data.RawGetString("buildtime").String())
@@ -127,6 +129,7 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	sightdistance, _ := strconv.Atoi(data.RawGetString("sightdistance").String())
 	speed, _ := strconv.ParseFloat(data.RawGetString("speed").String(), 64)
 
+	// Build option slice
 	bo := data.RawGetString("buildoptions")
 	var buildOptions []UnitRef
 	if bo.Type() == lua.LTTable {
@@ -134,6 +137,35 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 		bo.(*lua.LTable).ForEach(func(index lua.LValue, v lua.LValue) {
 			buildOptions = append(buildOptions, v.String())
 		})
+	}
+
+	// Custom params
+	cp := data.RawGetString("customparams")
+	customParams := CustomParams{}
+	if cp.Type() == lua.LTTable {
+		customParams.TechLevel, _ = strconv.Atoi(cp.(*lua.LTable).RawGetString("techlevel").String())
+		customParams.UnitGroup = cp.(*lua.LTable).RawGetString("unitgroup").String()
+	}
+	// Find lab that produces this one and get techlevel from that unit
+	if customParams.TechLevel == 0 && !strings.Contains(customParams.UnitGroup, "builder") {
+		found := false
+		for labRef := range LabGrid {
+			lp, _ := LoadUnitProperties(labRef)
+			for _, bo := range lp.BuildOptions {
+				if bo == ref {
+					found = true
+					customParams.TechLevel = lp.CustomParams.TechLevel
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+	}
+	// Default tech level to 1 if not found
+	if customParams.TechLevel == 0 {
+		customParams.TechLevel = 1
 	}
 
 	properties := UnitProperties{
@@ -144,6 +176,7 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 		Health:        health,
 		SightDistance: sightdistance,
 		Speed:         speed,
+		CustomParams:  &customParams,
 	}
 	unitPropertyCache[ref] = properties
 	return &properties, nil

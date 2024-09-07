@@ -21,6 +21,7 @@ func NewTableModel(mainModel *MainModel) Table {
 	columns := []table.Column{
 		{Title: "Ref ▼", Width: 20},
 		{Title: "Name", Width: 30},
+		{Title: "Tech level", Width: 20},
 		{Title: "Metal cost", Width: 20},
 		{Title: "Energy cost", Width: 20},
 		{Title: "Buildtime", Width: 20},
@@ -59,6 +60,7 @@ func NewTableModel(mainModel *MainModel) Table {
 		rows = append(rows, table.Row{
 			ref,
 			util.NameForRef(ref),
+			fmt.Sprintf("T%d", up.CustomParams.TechLevel),
 			strconv.Itoa(up.MetalCost),
 			strconv.Itoa(up.EnergyCost),
 			d.String(),
@@ -130,17 +132,19 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "f2":
 			sortStringColumn = 1
 		case "f3":
-			sortIntColumn = 2
+			sortStringColumn = 2
 		case "f4":
 			sortIntColumn = 3
 		case "f5":
-			sortStringColumn = 4
+			sortIntColumn = 4
 		case "f6":
-			sortIntColumn = 5
+			sortStringColumn = 5
 		case "f7":
 			sortIntColumn = 6
 		case "f8":
 			sortIntColumn = 7
+		case "f9":
+			sortIntColumn = 8
 		}
 
 		if sortStringColumn > -1 || sortIntColumn > -1 {

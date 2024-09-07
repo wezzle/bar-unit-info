@@ -80,7 +80,7 @@ func createUnitTablePage() (p *UnitTablePage) {
 
 	p.table = widgets.NewTable()
 	p.table.Rows = [][]string{
-		{"Ref", "Name", "Metal cost", "Energy cost", "Buildtime", "Health", "Sight range", "Speed"},
+		{"Ref", "Name", "Tech level", "Metal cost", "Energy cost", "Buildtime", "Health", "Sight range", "Speed"},
 	}
 	for _, ref := range p.buildableUnits {
 		up := p.properties[ref]
@@ -88,6 +88,7 @@ func createUnitTablePage() (p *UnitTablePage) {
 		p.table.Rows = append(p.table.Rows, []string{
 			ref,
 			util.NameForRef(ref),
+			fmt.Sprintf("T%d", up.CustomParams.Techlevel),
 			strconv.Itoa(up.MetalCost),
 			strconv.Itoa(up.EnergyCost),
 			d.String(),

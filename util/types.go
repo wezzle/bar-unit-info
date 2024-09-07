@@ -12,6 +12,10 @@ type (
 	WeaponDef   struct {
 		Range int
 	}
+	CustomParams struct {
+		TechLevel int
+		UnitGroup string
+	}
 	UnitProperties struct {
 		MetalCost     int
 		EnergyCost    int
@@ -21,6 +25,7 @@ type (
 		SightDistance int
 		Speed         float64
 		WeaponDefs    []WeaponDef
+		CustomParams  *CustomParams
 	}
 	TranslationsT struct {
 		Units struct {
