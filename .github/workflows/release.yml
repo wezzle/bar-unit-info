@@ -23,7 +23,7 @@ jobs:
       - name: Setup just
         uses: extractions/setup-just@v2
       - name: Switch SSH to HTTPS clone url
-        run: git config --global url.https://github.com/.insteadOf git://github.com/
+        run: git config --global url."https://github.com/".insteadOf git@github.com:
       - name: Fetch bar-repo
         run: just init
       - name: Set up Go
