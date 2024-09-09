@@ -39,15 +39,23 @@ func loadUnitGrid(v *lua.LTable) TUnitGrid {
 	v.ForEach(func(k lua.LValue, v lua.LValue) {
 		constructor := Constructor(k.String())
 		grid[constructor] = make(Group, 4)
-
 		v.(*lua.LTable).ForEach(func(k lua.LValue, group lua.LValue) {
 			groupIndex := indexFromLValue(k)
+			if groupIndex >= 4 {
+				return
+			}
 			grid[constructor][groupIndex] = make(GridRow, 3)
 			group.(*lua.LTable).ForEach(func(k lua.LValue, units lua.LValue) {
 				rowIndex := indexFromLValue(k)
+				if rowIndex >= 3 {
+					return
+				}
 				grid[constructor][groupIndex][rowIndex] = make(GridCol, 4)
 				units.(*lua.LTable).ForEach(func(k lua.LValue, unitName lua.LValue) {
 					colIndex := indexFromLValue(k)
+					if colIndex >= 4 {
+						return
+					}
 					grid[constructor][groupIndex][rowIndex][colIndex] = UnitRef(unitName.String())
 				})
 			})
