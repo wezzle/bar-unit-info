@@ -31,7 +31,7 @@ var (
 	factionColors    = map[string]string{
 		"Armada": "27",
 		"Cortex": "124",
-		"Legion": "114",
+		"Legion": "34",
 	}
 )
 
