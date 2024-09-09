@@ -2,7 +2,7 @@ name: goreleaser
 
 on:
   push:
-    branch:
+    branches:
       - feat/ci
     tags:
       - 'v*'
