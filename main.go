@@ -1,61 +1,33 @@
 package main
 
 import (
-	"log"
+	"embed"
+	"fmt"
+	"os"
 
-	ui "github.com/gizak/termui/v3"
-	"github.com/gizak/termui/v3/widgets"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/wezzle/bar-unit-info/model"
 	"github.com/wezzle/bar-unit-info/util"
 )
 
-var (
-	unitPropertyCache = make(map[util.UnitRef]util.UnitProperties)
-	debug             *widgets.List
-	constructorPage   *ConstructorPage
-)
-
-func debugLine(s string) {
-	debug.Rows = append(debug.Rows, s)
-	debug.ScrollBottom()
-	ui.Render(debug)
-}
-
-type Page interface {
-	Render()
-	HandleEvents(e ui.Event) (Page, error)
-}
+//go:embed bar-repo/luaui bar-repo/units bar-repo/language
+var repoFiles embed.FS
 
 func main() {
-	// Load globals
+	util.InitFS(repoFiles)
 	util.LoadTranslations("en")
 	util.LoadGridLayouts()
 
-	// Start terminal UI
-	if err := ui.Init(); err != nil {
-		log.Fatalf("failed to initialize termui: %v", err)
-	}
-	defer ui.Close()
+	// p, err := util.LoadUnitProperties("legmineb")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Printf("%+v\n", p.CustomParams)
+	// return
 
-	// Create initial page
-	var activePage Page
-	constructorPage = createConstructorPage()
-	activePage = constructorPage
-	// activePage = createUnitPage("corkarg", nil)
-	// activePage = createUnitTablePage()
-	// activePage.Render()
-
-	// Handle event loop
-	uiEvents := ui.PollEvents()
-	for {
-		e := <-uiEvents
-		page, err := activePage.HandleEvents(e)
-		if err != nil {
-			return
-		}
-		if page != nil {
-			activePage = page
-			ui.Clear()
-			activePage.Render()
-		}
+	m := model.NewMainModel()
+	if _, err := tea.NewProgram(m).Run(); err != nil {
+		fmt.Println("Error running program:", err)
+		os.Exit(1)
 	}
 }

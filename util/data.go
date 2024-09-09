@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"io/fs"
 	"os"
-	"path/filepath"
 	"regexp"
 
 	"github.com/lukegb/dds"
@@ -14,7 +14,7 @@ import (
 var Translations TranslationsT
 
 func LoadTranslations(lang string) TranslationsT {
-	f, err := os.Open(fmt.Sprintf("./bar-repo/language/%s/units.json", lang))
+	f, err := repoFiles.Open(fmt.Sprintf("bar-repo/language/%s/units.json", lang))
 	if err != nil {
 		panic(err)
 	}
@@ -58,10 +58,10 @@ func findUnitPropertiesFile(ref UnitRef) (string, error) {
 	}
 
 	file := ""
-	err = filepath.WalkDir("./bar-repo/units", func(path string, d os.DirEntry, err error) error {
+	err = fs.WalkDir(repoFiles, "bar-repo/units", func(path string, d os.DirEntry, err error) error {
 		if err == nil && r.MatchString(path) {
 			file = path
-			return filepath.SkipAll
+			return fs.SkipAll
 		}
 		return nil
 	})

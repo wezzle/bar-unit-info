@@ -81,6 +81,11 @@ func loadLabGrid(v *lua.LTable) TLabGrid {
 }
 
 func LoadGridLayouts() {
+	fileContents, err := repoFiles.ReadFile("bar-repo/luaui/configs/gridmenu_layouts.lua")
+	if err != nil {
+		panic(err)
+	}
+
 	L := lua.NewState()
 
 	springTable := lua.LTable{}
@@ -92,7 +97,7 @@ func LoadGridLayouts() {
 	springTable.RawSetString("GetModOptions", L.NewFunction(getModOptions))
 	L.SetGlobal("Spring", &springTable)
 	defer L.Close()
-	if err := L.DoFile("./bar-repo/luaui/configs/gridmenu_layouts.lua"); err != nil {
+	if err := L.DoString(string(fileContents)); err != nil {
 		panic(err)
 	}
 
@@ -107,14 +112,19 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 		return &properties, nil
 	}
 
-	L := lua.NewState()
-	defer L.Close()
-
 	unitFilepath, err := findUnitPropertiesFile(ref)
 	if err != nil {
 		return nil, err
 	}
-	if err := L.DoFile(unitFilepath); err != nil {
+	fileContents, err := repoFiles.ReadFile(unitFilepath)
+	if err != nil {
+		panic(err)
+	}
+
+	L := lua.NewState()
+	defer L.Close()
+
+	if err := L.DoString(string(fileContents)); err != nil {
 		return nil, err
 	}
 
