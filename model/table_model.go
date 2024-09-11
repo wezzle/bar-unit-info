@@ -150,7 +150,7 @@ var tableKeys = TableKeyMap{
 	KeyMap: table.DefaultKeyMap(),
 	Detail: key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "show unit detail"),
+		key.WithHelp("<enter>", "show unit detail"),
 	),
 	Left: key.NewBinding(
 		key.WithKeys("left", "h"),
@@ -174,15 +174,15 @@ var tableKeys = TableKeyMap{
 	),
 	FilterConfirm: key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "confirm filter"),
+		key.WithHelp("<enter>", "confirm filter"),
 	),
 	FilterCancel: key.NewBinding(
 		key.WithKeys("esc"),
-		key.WithHelp("esc", "cancel filter"),
+		key.WithHelp("<esc>", "cancel filter"),
 	),
 	ToggleSort: key.NewBinding(
 		key.WithKeys(spacebar),
-		key.WithHelp("space", "toggle sort"),
+		key.WithHelp("<space>", "toggle sort"),
 	),
 }
 
@@ -217,7 +217,6 @@ func NewTableModel(mainModel *MainModel) Table {
 	rows := make([]table.Row, 0)
 
 	// Use labs to find buildable units
-	// TODO we might miss units that are buildable by combat engineers and such
 	for ref := range util.LabGrid {
 		up, err := util.LoadUnitProperties(ref)
 		if err != nil {
@@ -233,11 +232,27 @@ func NewTableModel(mainModel *MainModel) Table {
 		}
 	}
 
+	// Check all buildable units for buildable units of their own
+	for _, ref := range buildableUnits {
+		up := properties[ref]
+		for _, r := range up.BuildOptions {
+			unitProperties, err := util.LoadUnitProperties(r)
+			if err != nil {
+				continue
+			}
+			buildableUnits = append(buildableUnits, r)
+			properties[r] = unitProperties
+		}
+	}
+
 	sort.Strings(buildableUnits)
 	buildableUnits = util.RemoveDuplicate(buildableUnits)
 
 	for _, ref := range buildableUnits {
-		up := properties[ref]
+		up, ok := properties[ref]
+		if !ok {
+			panic(ref)
+		}
 		d := time.Second * time.Duration(up.Buildtime/100)
 		rows = append(rows, table.Row{
 			ref,

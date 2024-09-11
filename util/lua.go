@@ -1,6 +1,7 @@
 package util
 
 import (
+	"math"
 	"strconv"
 	"strings"
 
@@ -141,10 +142,20 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 
 	// Simple stats
 	metalcost, _ := strconv.Atoi(data.RawGetString("metalcost").String())
+	if metalcost == 0 {
+		metalcost, _ = strconv.Atoi(data.RawGetString("buildcostmetal").String())
+	}
 	energycost, _ := strconv.Atoi(data.RawGetString("energycost").String())
+	if energycost == 0 {
+		energycost, _ = strconv.Atoi(data.RawGetString("buildcostenergy").String())
+	}
 	buildtime, _ := strconv.Atoi(data.RawGetString("buildtime").String())
 	health, _ := strconv.Atoi(data.RawGetString("health").String())
-	sightdistance, _ := strconv.Atoi(data.RawGetString("sightdistance").String())
+	sightdistance, err := strconv.Atoi(data.RawGetString("sightdistance").String())
+	if err != nil {
+		floatSightDistance, _ := strconv.ParseFloat(data.RawGetString("sightdistance").String(), 64)
+		sightdistance = int(math.Round(floatSightDistance))
+	}
 	speed, _ := strconv.ParseFloat(data.RawGetString("speed").String(), 64)
 
 	// Build option slice
@@ -173,6 +184,22 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 				if bo == ref {
 					found = true
 					customParams.TechLevel = lp.CustomParams.TechLevel
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+	}
+	// Find a unit that produces this one and get techlevel from that unit
+	if customParams.TechLevel == 0 {
+		found := false
+		for ref, up := range unitPropertyCache {
+			for _, bo := range up.BuildOptions {
+				if bo == ref {
+					found = true
+					customParams.TechLevel = up.CustomParams.TechLevel
 					break
 				}
 			}
