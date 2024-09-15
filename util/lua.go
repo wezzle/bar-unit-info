@@ -158,6 +158,12 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	}
 	speed, _ := strconv.ParseFloat(data.RawGetString("speed").String(), 64)
 
+	var workertime *int
+	if data.RawGetString("workertime").Type() != lua.LTNil {
+		workertimeVal, _ := strconv.Atoi(data.RawGetString("workertime").String())
+		workertime = &workertimeVal
+	}
+
 	// Build option slice
 	bo := data.RawGetString("buildoptions")
 	var buildOptions []UnitRef
@@ -221,6 +227,7 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 		Health:        health,
 		SightDistance: sightdistance,
 		Speed:         speed,
+		Buildpower:    workertime,
 		CustomParams:  &customParams,
 	}
 	unitPropertyCache[ref] = properties
