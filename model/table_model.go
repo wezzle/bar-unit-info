@@ -459,6 +459,15 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, tableKeys.Quit):
 			return m, tea.Quit
 		case key.Matches(msg, tableKeys.Detail):
+			selectedRef := m.Table.SelectedRow()[0]
+			selectedIsChosen := len(m.selectedRows) == 1 && m.selectedRows[0] == selectedRef
+			if len(m.selectedRows) > 0 && !selectedIsChosen {
+				if !slices.Contains(m.selectedRows, selectedRef) {
+					m.selectedRows = append(m.selectedRows)
+					m.SetHighlightedRows()
+				}
+				return NewCompareModel(m.mainModel, m.selectedRows...), cmd
+			}
 			return NewUnitModel(m.Table.SelectedRow()[0], m.mainModel), cmd
 		case key.Matches(msg, tableKeys.Left):
 			s := max(m.SelectedCol-1, 0)
