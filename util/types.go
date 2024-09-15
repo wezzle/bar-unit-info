@@ -194,6 +194,7 @@ type (
 		Health        int
 		SightDistance int
 		Speed         float64
+		Buildpower    *int
 		WeaponDefs    []WeaponDef
 		CustomParams  *CustomParams
 	}

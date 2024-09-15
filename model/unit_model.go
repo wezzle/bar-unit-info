@@ -54,6 +54,7 @@ func NewUnitModel(ref util.UnitRef, mainModel *MainModel) *Unit {
 	m.health = progress.New(progress.WithSolidFill("#49AE11"), progress.WithoutPercentage())
 	m.sightRange = progress.New(progress.WithSolidFill("#C6C8C9"), progress.WithoutPercentage())
 	m.speed = progress.New(progress.WithSolidFill("#1175AE"), progress.WithoutPercentage())
+	m.buildpower = progress.New(progress.WithSolidFill("#6e17a3"), progress.WithoutPercentage())
 
 	return &m
 }
@@ -74,6 +75,7 @@ type Unit struct {
 	health     progress.Model
 	sightRange progress.Model
 	speed      progress.Model
+	buildpower progress.Model
 }
 
 func (m *Unit) Init() tea.Cmd {
@@ -142,6 +144,10 @@ func (m *Unit) View() string {
 		{"Health", m.health.ViewAs(m.PercentageWithBase(m.properties.Health, 150)), strconv.Itoa(m.properties.Health)},
 		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, 35)), strconv.Itoa(m.properties.SightDistance)},
 		{"Speed", m.speed.ViewAs(m.PercentageWithBaseF(m.properties.Speed, 1.5)), strconv.Itoa(m.properties.SightDistance)},
+	}
+
+	if m.properties.Buildpower != nil {
+		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(*m.properties.Buildpower, 3)), strconv.Itoa(*m.properties.Buildpower)})
 	}
 
 	maxLabelWidth := 0
