@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -10,10 +11,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/wezzle/bar-unit-info/bubbles/table"
 	"github.com/wezzle/bar-unit-info/util"
 )
 
@@ -125,19 +126,20 @@ type TableKeyMap struct {
 	FilterConfirm key.Binding
 	FilterCancel  key.Binding
 	ToggleSort    key.Binding
+	SelectRow     key.Binding
 }
 
 // ShortHelp returns keybindings to be shown in the mini help view. It's part
 // of the key.Map interface.
 func (k TableKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.LineUp, k.LineDown, k.Left, k.Right, k.ToggleSort, k.Detail, k.Help, k.Quit}
+	return []key.Binding{k.LineUp, k.LineDown, k.Left, k.Right, k.ToggleSort, k.Detail, k.SelectRow, k.Help, k.Quit}
 }
 
 // FullHelp returns keybindings for the expanded help view. It's part of the
 // key.Map interface.
 func (k TableKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.LineUp, k.LineDown, k.Left, k.Right, k.ToggleSort, k.Detail, k.Help, k.Quit},
+		{k.LineUp, k.LineDown, k.Left, k.Right, k.ToggleSort, k.Detail, k.SelectRow, k.Help, k.Quit},
 		{k.GotoTop, k.GotoBottom, k.LineDown, k.PageDown, k.HalfPageUp, k.HalfPageDown},
 	}
 }
@@ -181,8 +183,12 @@ var tableKeys = TableKeyMap{
 		key.WithHelp("<esc>", "cancel filter"),
 	),
 	ToggleSort: key.NewBinding(
+		key.WithKeys("s"),
+		key.WithHelp("s", "toggle sort"),
+	),
+	SelectRow: key.NewBinding(
 		key.WithKeys(spacebar),
-		key.WithHelp("<space>", "toggle sort"),
+		key.WithHelp("<space>", "select row"),
 	),
 }
 
@@ -285,6 +291,10 @@ func NewTableModel(mainModel *MainModel) Table {
 		Foreground(lipgloss.Color("229")).
 		Background(lipgloss.Color("57")).
 		Bold(false)
+	s.Highlighted = s.Highlighted.
+		Foreground(lipgloss.Color("0")).
+		Background(lipgloss.Color("6")).
+		Bold(false)
 	t.SetStyles(s)
 
 	ti := textinput.New()
@@ -330,6 +340,7 @@ type Table struct {
 	columns       []ColumnWithType
 	columnFilters []string
 	rows          []table.Row
+	selectedRows  []string
 }
 
 func (m *Table) FilterRows(cf []string) {
@@ -379,6 +390,17 @@ func (m *Table) FilterRows(cf []string) {
 	m.Table.SetRows(filteredRows)
 }
 
+func (m *Table) SetHighlightedRows() {
+	h := make([]int, 0)
+	for i, r := range m.Table.Rows() {
+		ref := r[0]
+		if slices.Contains(m.selectedRows, ref) {
+			h = append(h, i)
+		}
+	}
+	m.Table.SetHighlighted(h)
+}
+
 func (m *Table) Init() tea.Cmd {
 	return nil
 }
@@ -388,6 +410,7 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	reverse := false
 	var selectedCol *int
 	var sortCol *int
+	preventPropagation := false
 
 	if m.FilterMode {
 		switch msg := msg.(type) {
@@ -445,6 +468,23 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			selectedCol = &s
 		case key.Matches(msg, tableKeys.ToggleSort):
 			sortCol = &m.SelectedCol
+		case key.Matches(msg, tableKeys.SelectRow):
+			selectedRows := make([]string, 0)
+			contains := false
+			ref := m.Table.SelectedRow()[0]
+			for _, r := range m.selectedRows {
+				if ref != r {
+					selectedRows = append(selectedRows, r)
+				} else {
+					contains = true
+				}
+			}
+			m.selectedRows = selectedRows
+			if !contains {
+				m.selectedRows = append(m.selectedRows, ref)
+			}
+			m.SetHighlightedRows()
+			preventPropagation = true
 		}
 
 		if sortCol != nil {
@@ -487,6 +527,7 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return isLess
 			})
 			m.Table.SetRows(rows)
+			m.SetHighlightedRows()
 		}
 
 		selectedColUpdate := selectedCol != nil && m.SelectedCol != *selectedCol
@@ -503,7 +544,7 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.SelectedCol = *selectedCol
 		}
 	}
-	if sortCol != nil {
+	if preventPropagation {
 		// Exit so we don't run table's keymap
 		return m, cmd
 	}
