@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -28,6 +29,7 @@ var (
 	labelStyle       = lipgloss.NewStyle().Margin(0, 1, 0, 0).Foreground(lipgloss.Color("241"))
 	descriptionStyle = lipgloss.NewStyle().Margin(1, 0, 0).Foreground(lipgloss.Color("245"))
 	padding          = lipgloss.NewStyle().Margin(1, 0, 0)
+	weaponStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#cc0000"))
 	factionColors    = map[string]string{
 		"Armada": "27",
 		"Cortex": "124",
@@ -59,6 +61,9 @@ func NewUnitModel(ref util.UnitRef, mainModel *MainModel) *Unit {
 	m.jammerRange = progress.New(progress.WithSolidFill("#ea9896"), progress.WithoutPercentage())
 	m.sonarRange = progress.New(progress.WithSolidFill("#29a3e8"), progress.WithoutPercentage())
 
+	m.weaponDps = progress.New(progress.WithSolidFill("#cc0000"), progress.WithoutPercentage())
+	m.weaponRange = progress.New(progress.WithSolidFill("#c3807f"), progress.WithoutPercentage())
+
 	return &m
 }
 
@@ -82,6 +87,8 @@ type Unit struct {
 	radarRange  progress.Model
 	jammerRange progress.Model
 	sonarRange  progress.Model
+	weaponDps   progress.Model
+	weaponRange progress.Model
 }
 
 func (m *Unit) Init() tea.Cmd {
@@ -109,7 +116,9 @@ func (m *Unit) RenderBar(labelWidth int, label string, progress string, maxValue
 	bar := []string{
 		labelStyle.Width(labelWidth + 1).Render(fmt.Sprintf("%s:", label)),
 		progress,
-		lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Margin(0, 0, 0, 1).Render(v),
+	}
+	if value != "" {
+		bar = append(bar, lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Margin(0, 0, 0, 1).Render(v))
 	}
 	return padding.Render(lipgloss.JoinHorizontal(lipgloss.Top, bar...))
 }
@@ -165,9 +174,17 @@ func (m *Unit) View() string {
 		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(*m.properties.Buildpower, 3)), strconv.Itoa(*m.properties.Buildpower)})
 	}
 
+	weaponStats := [][]string{
+		{"Weapons", weaponStyle.Render(m.properties.SummarizeWeaponTypes()), ""},
+		{"DPS", m.weaponDps.ViewAs(m.PercentageWithBase(int(math.Round(m.properties.DPS())), 15)), strconv.Itoa(int(math.Round(m.properties.DPS())))},
+		{"Weapon range", m.weaponRange.ViewAs(m.PercentageWithBase(int(m.properties.MaxWeaponRange()), 20)), strconv.Itoa(int(m.properties.MaxWeaponRange()))},
+	}
+
+	allStats := append(stats, weaponStats...)
+
 	maxLabelWidth := 0
 	maxValueWidth := 0
-	for _, stat := range stats {
+	for _, stat := range allStats {
 		maxLabelWidth = max(ansi.StringWidth(stat[0]), maxLabelWidth)
 		maxValueWidth = max(ansi.StringWidth(stat[2]), maxValueWidth)
 	}
@@ -175,6 +192,13 @@ func (m *Unit) View() string {
 	for _, stat := range stats {
 		sections = append(sections, m.RenderBar(maxLabelWidth, stat[0], stat[1], maxValueWidth, stat[2]))
 	}
+
+	weaponSections := make([]string, 0)
+	for _, stat := range weaponStats {
+		weaponSections = append(weaponSections, m.RenderBar(maxLabelWidth, stat[0], stat[1], maxValueWidth, stat[2]))
+	}
+
+	sections = append(sections, padding.Render(lipgloss.JoinVertical(lipgloss.Left, weaponSections...)))
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }

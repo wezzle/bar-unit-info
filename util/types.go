@@ -10,7 +10,9 @@ type (
 	Lab         = UnitRef
 	TLabGrid    map[Lab]GridRow
 	WeaponType  = string
-	Damage      struct{}
+	Damage      struct {
+		Default float64
+	}
 	ScarIndices struct{}
 	Shield      struct {
 		Repulser         bool

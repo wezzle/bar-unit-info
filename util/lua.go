@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -116,58 +115,6 @@ func LoadGridLayouts() {
 	LabGrid = loadLabGrid(lv.RawGetString("LabGrids").(*lua.LTable))
 }
 
-type LuaTableParser struct {
-	data *lua.LTable
-}
-
-func (p *LuaTableParser) String(key string) (s string, err error) {
-	v := p.data.RawGetString(key)
-	if v.Type() != lua.LTString {
-		err = fmt.Errorf("incorrect lua type, expected 'LTString' but got '%s'", v.Type())
-		return
-	}
-	s = v.String()
-	return
-}
-
-func (p *LuaTableParser) Int(key string) (i int, err error) {
-	v := p.data.RawGetString(key)
-	if v.Type() != lua.LTNumber && v.Type() != lua.LTString {
-		err = fmt.Errorf("incorrect lua type, expected 'LTString' or 'LTNumber' but got '%s'", v.Type())
-		return
-	}
-	i, err = strconv.Atoi(v.String())
-	return
-}
-
-func (p *LuaTableParser) OptionalInt(key string) (i *int, err error) {
-	v := p.data.RawGetString(key)
-	if v.Type() != lua.LTNumber && v.Type() != lua.LTString {
-		err = fmt.Errorf("incorrect lua type, expected 'LTString' or 'LTNumber' but got '%s'", v.Type())
-		return
-	}
-	var iVal int
-	iVal, err = strconv.Atoi(v.String())
-	i = &iVal
-	return
-}
-
-func (p *LuaTableParser) Float64(key string) (f float64, err error) {
-	v := p.data.RawGetString(key)
-	if v.Type() != lua.LTNumber && v.Type() != lua.LTString {
-		err = fmt.Errorf("incorrect lua type, expected 'LTString' or 'LTNumber' but got '%s'", v.Type())
-		return
-	}
-	f, err = strconv.ParseFloat(v.String(), 64)
-	return
-}
-
-func IgnoreError[T any](key string, f func(string) (T, error)) T {
-	v, _ := f(key)
-	// TODO We should probably write these errors to somewhere
-	return v
-}
-
 func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	if properties, ok := unitPropertyCache[ref]; ok {
 		return &properties, nil
@@ -274,7 +221,183 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 
 	properties.BuildOptions = buildOptions
 	properties.CustomParams = &customParams
+	properties.WeaponDefs = ParseWeaponDefs(data)
 
 	unitPropertyCache[ref] = properties
 	return &properties, nil
+}
+
+func ParseWeaponDefs(data *lua.LTable) []WeaponDef {
+	defs := make([]WeaponDef, 0)
+	wd := data.RawGetString("weapondefs")
+	if wd.Type() != lua.LTTable {
+		return nil
+	}
+
+	wd.(*lua.LTable).ForEach(func(k lua.LValue, v lua.LValue) {
+		vT := v.(*lua.LTable)
+		p := LuaTableParser{vT}
+		damage := IgnoreError("damage", p.Table)
+		def := WeaponDef{
+			Name:             IgnoreError("name", p.String),
+			WeaponType:       IgnoreError("weapontype", p.String),
+			Id:               IgnoreError("id", p.Int),
+			CustomParams:     map[string]string{},
+			AvoidFriendly:    IgnoreError("avoidfriendly", p.Bool),
+			AvoidFeature:     IgnoreError("avoidfeature", p.Bool),
+			AvoidNeutral:     IgnoreError("avoidneutral", p.Bool),
+			AvoidGround:      IgnoreError("avoidground", p.Bool),
+			AvoidCloaked:     IgnoreError("avoidcloaked", p.Bool),
+			CollideEnemy:     IgnoreError("collideenemy", p.Bool),
+			CollideFriendly:  IgnoreError("collidefriendly", p.Bool),
+			CollideFeature:   IgnoreError("collidefeature", p.Bool),
+			CollideNeutral:   IgnoreError("collideneutral", p.Bool),
+			CollideFireBase:  IgnoreError("collidefirebase", p.Bool),
+			CollideNonTarget: IgnoreError("collidenontarget", p.Bool),
+			CollideGround:    IgnoreError("collideground", p.Bool),
+			CollideCloaked:   IgnoreError("collidecloaked", p.Bool),
+			Damage: Damage{
+				Default: IgnoreError("default", damage.Float64),
+			},
+			ExplosionSpeed:           IgnoreError("explosionspeed", p.Float64),
+			ImpactOnly:               IgnoreError("impactonly", p.Bool),
+			NoSelfDamage:             IgnoreError("noselfdamage", p.Bool),
+			NoExplode:                IgnoreError("noexplode", p.Bool),
+			Burnblow:                 IgnoreError("burnblow", p.Bool),
+			DamageAreaOfEffect:       IgnoreError("damageareaofeffect", p.Float64),
+			EdgeEffectiveness:        IgnoreError("edgeeffectiveness", p.Float64),
+			CollisionSize:            IgnoreError("collisionsize", p.Float64),
+			WeaponVelocity:           IgnoreError("weaponvelocity", p.Float64),
+			StartVelocity:            IgnoreError("startvelocity", p.Float64),
+			Weaponacceleration:       IgnoreError("weaponacceleration", p.Float64),
+			ReloadTime:               IgnoreError("reloadtime", p.Float64),
+			BurstRate:                IgnoreError("burstrate", p.Float64),
+			Burst:                    IgnoreError("burst", p.Int),
+			Projectiles:              IgnoreError("projectiles", p.Int),
+			WaterBounce:              IgnoreError("waterbounce", p.Bool),
+			GroundBounce:             IgnoreError("groundbounce", p.Bool),
+			BounceSlip:               IgnoreError("bounceslip", p.Float64),
+			BounceRebound:            IgnoreError("bouncerebound", p.Float64),
+			NumBounce:                IgnoreError("numbounce", p.Int),
+			ImpulseFactor:            IgnoreError("impulsefactor", p.Float64),
+			ImpulseBoost:             IgnoreError("impulseboost", p.Float64),
+			CraterMult:               IgnoreError("cratermult", p.Float64),
+			CraterBoost:              IgnoreError("craterboost", p.Float64),
+			CraterAreaOfEffect:       IgnoreError("craterareaofeffect", p.Float64),
+			Waterweapon:              IgnoreError("waterweapon", p.Bool),
+			Submissile:               IgnoreError("submissile", p.Bool),
+			FireSubmersed:            IgnoreError("firesubmersed", p.Bool),
+			Commandfire:              IgnoreError("commandfire", p.Bool),
+			Range:                    IgnoreError("range", p.Float64),
+			Heightmod:                IgnoreError("heightmod", p.Float64),
+			TargetBorder:             IgnoreError("targetborder", p.Float64),
+			CylinderTargeting:        IgnoreError("cylindertargeting", p.Float64),
+			Turret:                   IgnoreError("turret", p.Bool),
+			FixedLauncher:            IgnoreError("fixedlauncher", p.Bool),
+			Tolerance:                IgnoreError("tolerance", p.Float64),
+			Firetolerance:            IgnoreError("firetolerance", p.Float64),
+			HighTrajectory:           IgnoreError("hightrajectory", p.Int),
+			TrajectoryHeight:         IgnoreError("trajectoryheight", p.Float64),
+			Tracks:                   IgnoreError("tracks", p.Bool),
+			Wobble:                   IgnoreError("wobble", p.Float64),
+			Dance:                    IgnoreError("dance", p.Float64),
+			GravityAffected:          IgnoreError("gravityaffected", p.Bool),
+			MyGravity:                IgnoreError("mygravity", p.Float64),
+			CanAttackGround:          IgnoreError("canattackground", p.Bool),
+			WeaponTimer:              IgnoreError("weapontimer", p.Float64),
+			Flighttime:               IgnoreError("flighttime", p.Float64),
+			Turnrate:                 IgnoreError("turnrate", p.Float64),
+			HeightBoostFactor:        IgnoreError("heightboostfactor", p.Float64),
+			ProximityPriority:        IgnoreError("proximitypriority", p.Float64),
+			AllowNonBlockingAim:      IgnoreError("allownonblockingaim", p.Bool),
+			Accuracy:                 IgnoreError("accuracy", p.Float64),
+			SprayAngle:               IgnoreError("sprayangle", p.Float64),
+			MovingAccuracy:           IgnoreError("movingaccuracy", p.Float64),
+			TargetMoveError:          IgnoreError("targetmoveerror", p.Float64),
+			LeadLimit:                IgnoreError("leadlimit", p.Float64),
+			LeadBonus:                IgnoreError("leadbonus", p.Float64),
+			PredictBoost:             IgnoreError("predictboost", p.Float64),
+			OwnerExpAccWeight:        IgnoreError("ownerexpaccweight", p.Float64),
+			MinIntensity:             IgnoreError("minintensity", p.Float64),
+			Duration:                 IgnoreError("duration", p.Float64),
+			Beamtime:                 IgnoreError("beamtime", p.Float64),
+			Beamburst:                IgnoreError("beamburst", p.Bool),
+			BeamTTL:                  IgnoreError("beamttl", p.Int),
+			SweepFire:                IgnoreError("sweepfire", p.Bool),
+			LargeBeamLaser:           IgnoreError("largebeamlaser", p.Bool),
+			SizeGrowth:               IgnoreError("sizegrowth", p.Float64),
+			FlameGfxTime:             IgnoreError("flamegfxtime", p.Float64),
+			MetalPerShot:             IgnoreError("metalpershot", p.Float64),
+			EnergyPerShot:            IgnoreError("energypershot", p.Float64),
+			FireStarter:              IgnoreError("firestarter", p.Float64),
+			Paralyzer:                IgnoreError("paralyzer", p.Bool),
+			ParalyzeTime:             IgnoreError("paralyzetime", p.Int),
+			Stockpile:                IgnoreError("stockpile", p.Bool),
+			StockpileTime:            IgnoreError("stockpiletime", p.Float64),
+			Targetable:               IgnoreError("targetable", p.Int),
+			Interceptor:              IgnoreError("interceptor", p.Int),
+			InterceptedByShieldType:  IgnoreError("interceptedbyshieldtype", p.Int64),
+			Coverage:                 IgnoreError("coverage", p.Float64),
+			InterceptSolo:            IgnoreError("interceptsolo", p.Bool),
+			DynDamageInverted:        IgnoreError("dyndamageinverted", p.Bool),
+			DynDamageExp:             IgnoreError("dyndamageexp", p.Float64),
+			DynDamageMin:             IgnoreError("dyndamagemin", p.Float64),
+			DynDamageRange:           IgnoreError("dyndamagerange", p.Float64),
+			Shield:                   Shield{},
+			RechargeDelay:            IgnoreError("rechargedelay", p.Float64),
+			Model:                    IgnoreError("model", p.String),
+			Size:                     IgnoreError("size", p.Float64),
+			ScarGlowColorMap:         IgnoreError("scarglowcolormap", p.String),
+			ScarIndices:              ScarIndices{},
+			ExplosionScar:            IgnoreError("explosionscar", p.Bool),
+			ScarDiameter:             IgnoreError("scardiameter", p.Float64),
+			ScarAlpha:                IgnoreError("scaralpha", p.Float64),
+			ScarGlow:                 IgnoreError("scarglow", p.Float64),
+			ScarTtl:                  IgnoreError("scarttl", p.Float64),
+			ScarGlowTtl:              IgnoreError("scarglowttl", p.Float64),
+			ScarDotElimination:       IgnoreError("scardotelimination", p.Float64),
+			ScarProjVector:           [4]float64{},
+			ScarColorTint:            [4]float64{},
+			AlwaysVisible:            IgnoreError("alwaysvisible", p.Bool),
+			CameraShake:              IgnoreError("camerashake", p.Float64),
+			SmokeTrail:               IgnoreError("smoketrail", p.Bool),
+			SmokeTrailCastShadow:     IgnoreError("smoketrailcastshadow", p.Bool),
+			SmokePeriod:              IgnoreError("smokeperiod", p.Int),
+			SmokeTime:                IgnoreError("smoketime", p.Int),
+			SmokeSize:                IgnoreError("smokesize", p.Float64),
+			SmokeColor:               IgnoreError("smokecolor", p.Float64),
+			CastShadow:               IgnoreError("castshadow", p.Bool),
+			SizeDecay:                IgnoreError("sizedecay", p.Float64),
+			AlphaDecay:               IgnoreError("alphadecay", p.Float64),
+			Separation:               IgnoreError("separation", p.Float64),
+			NoGap:                    IgnoreError("nogap", p.Bool),
+			Stages:                   IgnoreError("stages", p.Int),
+			LodDistance:              IgnoreError("loddistance", p.Int),
+			Thickness:                IgnoreError("thickness", p.Float64),
+			CoreThickness:            IgnoreError("corethickness", p.Float64),
+			LaserFlareSize:           IgnoreError("laserflaresize", p.Float64),
+			TileLength:               IgnoreError("tilelength", p.Float64),
+			ScrollSpeed:              IgnoreError("scrollspeed", p.Float64),
+			PulseSpeed:               IgnoreError("pulsespeed", p.Float64),
+			BeamDecay:                IgnoreError("beamdecay", p.Float64),
+			FalloffRate:              IgnoreError("falloffrate", p.Float64),
+			Hardstop:                 IgnoreError("hardstop", p.Bool),
+			RgbColor:                 [3]float64{},
+			RgbColor2:                [3]float64{},
+			Intensity:                IgnoreError("intensity", p.Float64),
+			Colormap:                 IgnoreError("colormap", p.String),
+			CegTag:                   IgnoreError("cegtag", p.String),
+			ExplosionGenerator:       IgnoreError("explosiongenerator", p.String),
+			BounceExplosionGenerator: IgnoreError("bounceexplosiongenerator", p.String),
+			SoundTrigger:             IgnoreError("soundtrigger", p.Bool),
+			SoundStart:               IgnoreError("soundstart", p.String),
+			SoundHitDry:              IgnoreError("soundhitdry", p.String),
+			SoundHitWet:              IgnoreError("soundhitwet", p.String),
+			SoundStartVolume:         IgnoreError("soundstartvolume", p.Float64),
+			SoundHitDryVolume:        IgnoreError("soundhitdryvolume", p.Float64),
+			SoundHitWetVolume:        IgnoreError("soundhitwetvolume", p.Float64),
+		}
+		defs = append(defs, def)
+	})
+	return defs
 }
