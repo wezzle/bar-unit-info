@@ -1,7 +1,7 @@
 package util
 
 import (
-	"math"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -116,6 +116,58 @@ func LoadGridLayouts() {
 	LabGrid = loadLabGrid(lv.RawGetString("LabGrids").(*lua.LTable))
 }
 
+type LuaTableParser struct {
+	data *lua.LTable
+}
+
+func (p *LuaTableParser) String(key string) (s string, err error) {
+	v := p.data.RawGetString(key)
+	if v.Type() != lua.LTString {
+		err = fmt.Errorf("incorrect lua type, expected 'LTString' but got '%s'", v.Type())
+		return
+	}
+	s = v.String()
+	return
+}
+
+func (p *LuaTableParser) Int(key string) (i int, err error) {
+	v := p.data.RawGetString(key)
+	if v.Type() != lua.LTNumber && v.Type() != lua.LTString {
+		err = fmt.Errorf("incorrect lua type, expected 'LTString' or 'LTNumber' but got '%s'", v.Type())
+		return
+	}
+	i, err = strconv.Atoi(v.String())
+	return
+}
+
+func (p *LuaTableParser) OptionalInt(key string) (i *int, err error) {
+	v := p.data.RawGetString(key)
+	if v.Type() != lua.LTNumber && v.Type() != lua.LTString {
+		err = fmt.Errorf("incorrect lua type, expected 'LTString' or 'LTNumber' but got '%s'", v.Type())
+		return
+	}
+	var iVal int
+	iVal, err = strconv.Atoi(v.String())
+	i = &iVal
+	return
+}
+
+func (p *LuaTableParser) Float64(key string) (f float64, err error) {
+	v := p.data.RawGetString(key)
+	if v.Type() != lua.LTNumber && v.Type() != lua.LTString {
+		err = fmt.Errorf("incorrect lua type, expected 'LTString' or 'LTNumber' but got '%s'", v.Type())
+		return
+	}
+	f, err = strconv.ParseFloat(v.String(), 64)
+	return
+}
+
+func IgnoreError[T any](key string, f func(string) (T, error)) T {
+	v, _ := f(key)
+	// TODO We should probably write these errors to somewhere
+	return v
+}
+
 func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	if properties, ok := unitPropertyCache[ref]; ok {
 		return &properties, nil
@@ -140,29 +192,30 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	lv := L.Get(-1)
 	data := lv.(*lua.LTable).RawGetString(ref).(*lua.LTable)
 
-	// Simple stats
-	metalcost, _ := strconv.Atoi(data.RawGetString("metalcost").String())
-	if metalcost == 0 {
-		metalcost, _ = strconv.Atoi(data.RawGetString("buildcostmetal").String())
-	}
-	energycost, _ := strconv.Atoi(data.RawGetString("energycost").String())
-	if energycost == 0 {
-		energycost, _ = strconv.Atoi(data.RawGetString("buildcostenergy").String())
-	}
-	buildtime, _ := strconv.Atoi(data.RawGetString("buildtime").String())
-	health, _ := strconv.Atoi(data.RawGetString("health").String())
-	sightdistance, err := strconv.Atoi(data.RawGetString("sightdistance").String())
-	if err != nil {
-		floatSightDistance, _ := strconv.ParseFloat(data.RawGetString("sightdistance").String(), 64)
-		sightdistance = int(math.Round(floatSightDistance))
-	}
-	speed, _ := strconv.ParseFloat(data.RawGetString("speed").String(), 64)
+	properties := UnitProperties{}
 
-	var workertime *int
-	if data.RawGetString("workertime").Type() != lua.LTNil {
-		workertimeVal, _ := strconv.Atoi(data.RawGetString("workertime").String())
-		workertime = &workertimeVal
+	p := LuaTableParser{data}
+
+	// Simple stats assignments
+
+	properties.MetalCost = IgnoreError("metalcost", p.Int)
+	if properties.MetalCost == 0 {
+		properties.MetalCost = IgnoreError("buildcostmetal", p.Int)
 	}
+
+	properties.EnergyCost = IgnoreError("energycost", p.Int)
+	if properties.EnergyCost == 0 {
+		properties.EnergyCost = IgnoreError("buildcostenergy", p.Int)
+	}
+
+	properties.Buildtime = IgnoreError("buildtime", p.Int)
+	properties.Health = IgnoreError("health", p.Int)
+	properties.SightDistance = int(IgnoreError("sightdistance", p.Float64))
+	properties.Speed = IgnoreError("speed", p.Float64)
+	properties.Buildpower = IgnoreError("workertime", p.OptionalInt)
+	properties.RadarDistance = IgnoreError("radardistance", p.OptionalInt)
+	properties.JammerDistance = IgnoreError("radardistancejam", p.OptionalInt)
+	properties.SonarDistance = IgnoreError("sonardistance", p.OptionalInt)
 
 	// Build option slice
 	bo := data.RawGetString("buildoptions")
@@ -219,17 +272,9 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 		customParams.TechLevel = 1
 	}
 
-	properties := UnitProperties{
-		MetalCost:     metalcost,
-		EnergyCost:    energycost,
-		Buildtime:     buildtime,
-		BuildOptions:  buildOptions,
-		Health:        health,
-		SightDistance: sightdistance,
-		Speed:         speed,
-		Buildpower:    workertime,
-		CustomParams:  &customParams,
-	}
+	properties.BuildOptions = buildOptions
+	properties.CustomParams = &customParams
+
 	unitPropertyCache[ref] = properties
 	return &properties, nil
 }
