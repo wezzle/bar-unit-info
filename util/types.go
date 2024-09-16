@@ -187,16 +187,19 @@ type (
 		UnitGroup string
 	}
 	UnitProperties struct {
-		MetalCost     int
-		EnergyCost    int
-		Buildtime     int
-		BuildOptions  []UnitRef
-		Health        int
-		SightDistance int
-		Speed         float64
-		Buildpower    *int
-		WeaponDefs    []WeaponDef
-		CustomParams  *CustomParams
+		MetalCost      int
+		EnergyCost     int
+		Buildtime      int
+		BuildOptions   []UnitRef
+		Health         int
+		SightDistance  int
+		Speed          float64
+		Buildpower     *int
+		SonarDistance  *int
+		RadarDistance  *int
+		JammerDistance *int
+		WeaponDefs     []WeaponDef
+		CustomParams   *CustomParams
 	}
 	TranslationsT struct {
 		Units struct {

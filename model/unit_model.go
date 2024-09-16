@@ -55,6 +55,9 @@ func NewUnitModel(ref util.UnitRef, mainModel *MainModel) *Unit {
 	m.sightRange = progress.New(progress.WithSolidFill("#C6C8C9"), progress.WithoutPercentage())
 	m.speed = progress.New(progress.WithSolidFill("#1175AE"), progress.WithoutPercentage())
 	m.buildpower = progress.New(progress.WithSolidFill("#6e17a3"), progress.WithoutPercentage())
+	m.radarRange = progress.New(progress.WithSolidFill("#43e029"), progress.WithoutPercentage())
+	m.jammerRange = progress.New(progress.WithSolidFill("#ea9896"), progress.WithoutPercentage())
+	m.sonarRange = progress.New(progress.WithSolidFill("#29a3e8"), progress.WithoutPercentage())
 
 	return &m
 }
@@ -69,13 +72,16 @@ type Unit struct {
 	mainModel *MainModel
 
 	// Stats
-	metalCost  progress.Model
-	energyCost progress.Model
-	buildtime  progress.Model
-	health     progress.Model
-	sightRange progress.Model
-	speed      progress.Model
-	buildpower progress.Model
+	metalCost   progress.Model
+	energyCost  progress.Model
+	buildtime   progress.Model
+	health      progress.Model
+	sightRange  progress.Model
+	speed       progress.Model
+	buildpower  progress.Model
+	radarRange  progress.Model
+	jammerRange progress.Model
+	sonarRange  progress.Model
 }
 
 func (m *Unit) Init() tea.Cmd {
@@ -142,10 +148,19 @@ func (m *Unit) View() string {
 		{"Energy cost", m.energyCost.ViewAs(m.PercentageWithBase(m.properties.EnergyCost, 900)), strconv.Itoa(m.properties.EnergyCost)},
 		{"Buildtime", m.buildtime.ViewAs(m.PercentageWithBase(m.properties.Buildtime, 1000)), d.String()},
 		{"Health", m.health.ViewAs(m.PercentageWithBase(m.properties.Health, 150)), strconv.Itoa(m.properties.Health)},
-		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, 35)), strconv.Itoa(m.properties.SightDistance)},
 		{"Speed", m.speed.ViewAs(m.PercentageWithBaseF(m.properties.Speed, 1.5)), strconv.Itoa(m.properties.SightDistance)},
+		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, 35)), strconv.Itoa(m.properties.SightDistance)},
 	}
 
+	if m.properties.RadarDistance != nil {
+		stats = append(stats, []string{"Radar range", m.radarRange.ViewAs(m.PercentageWithBase(*m.properties.RadarDistance, 35)), strconv.Itoa(*m.properties.RadarDistance)})
+	}
+	if m.properties.JammerDistance != nil {
+		stats = append(stats, []string{"Jammer range", m.jammerRange.ViewAs(m.PercentageWithBase(*m.properties.JammerDistance, 10)), strconv.Itoa(*m.properties.JammerDistance)})
+	}
+	if m.properties.SonarDistance != nil {
+		stats = append(stats, []string{"Sonar range", m.sonarRange.ViewAs(m.PercentageWithBase(*m.properties.SonarDistance, 35)), strconv.Itoa(*m.properties.SonarDistance)})
+	}
 	if m.properties.Buildpower != nil {
 		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(*m.properties.Buildpower, 3)), strconv.Itoa(*m.properties.Buildpower)})
 	}
