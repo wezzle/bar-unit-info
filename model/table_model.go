@@ -15,6 +15,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/wezzle/bar-unit-info/bubbles/table"
+	"github.com/wezzle/bar-unit-info/gamedata"
+	"github.com/wezzle/bar-unit-info/gamedata/types"
 	"github.com/wezzle/bar-unit-info/util"
 )
 
@@ -81,7 +83,7 @@ const (
 
 func ValueForRowAndColumn(row table.Row, column ColumnWithType, columnIndex int) any {
 	ref := row[0]
-	properties, _ := util.LoadUnitProperties(ref)
+	properties, _ := gamedata.GetUnitProperties(ref)
 	val := column.ValueByPropertyKey(properties)
 	if val == nil {
 		return row[columnIndex]
@@ -95,7 +97,7 @@ type ColumnWithType struct {
 	PropertyKey string
 }
 
-func (c *ColumnWithType) ValueByPropertyKey(p *util.UnitProperties) any {
+func (c *ColumnWithType) ValueByPropertyKey(p types.UnitProperties) any {
 	switch c.PropertyKey {
 	case "metalcost":
 		return p.MetalCost
@@ -218,19 +220,19 @@ func NewTableModel(mainModel *MainModel) Table {
 	}
 	tableWidth = tableWidth + defaultBorderWidth*2
 
-	buildableUnits := make([]util.UnitRef, 0)
-	properties := make(map[util.UnitRef]*util.UnitProperties)
+	buildableUnits := make([]types.UnitRef, 0)
+	properties := make(map[types.UnitRef]types.UnitProperties)
 	rows := make([]table.Row, 0)
 
 	// Use labs to find buildable units
-	for ref := range util.LabGrid {
-		up, err := util.LoadUnitProperties(ref)
-		if err != nil {
+	for ref := range gamedata.GetLabGrid() {
+		up, ok := gamedata.GetUnitProperties(ref)
+		if !ok {
 			continue
 		}
 		for _, ref := range up.BuildOptions {
-			unitProperties, err := util.LoadUnitProperties(ref)
-			if err != nil {
+			unitProperties, ok := gamedata.GetUnitProperties(ref)
+			if !ok {
 				continue
 			}
 			buildableUnits = append(buildableUnits, ref)
@@ -242,8 +244,8 @@ func NewTableModel(mainModel *MainModel) Table {
 	for _, ref := range buildableUnits {
 		up := properties[ref]
 		for _, r := range up.BuildOptions {
-			unitProperties, err := util.LoadUnitProperties(r)
-			if err != nil {
+			unitProperties, ok := gamedata.GetUnitProperties(ref)
+			if !ok {
 				continue
 			}
 			buildableUnits = append(buildableUnits, r)
