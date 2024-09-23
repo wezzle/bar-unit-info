@@ -4,3 +4,6 @@
 tmp/
 .direnv
 bar-repo
+gamedata/*.go
+!gamedata/gen.go
+!gamedata/gamedata.go
