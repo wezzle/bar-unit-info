@@ -10,6 +10,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/wezzle/bar-unit-info/gamedata"
+	"github.com/wezzle/bar-unit-info/gamedata/types"
 	"github.com/wezzle/bar-unit-info/util"
 )
 
@@ -37,16 +39,16 @@ var (
 	}
 )
 
-func NewUnitModel(ref util.UnitRef, mainModel *MainModel) *Unit {
+func NewUnitModel(ref types.UnitRef, mainModel *MainModel) *Unit {
 	m := Unit{}
 	m.ref = ref
 	m.mainModel = mainModel
 	m.name = util.NameForRef(ref)
 	m.description = util.DescriptionForRef(ref)
-	var err error
-	m.properties, err = util.LoadUnitProperties(ref)
-	if err != nil {
-		panic(err)
+	var ok bool
+	m.properties, ok = gamedata.GetUnitPropertiesByRef(ref)
+	if !ok {
+		panic("unit properties file not generated")
 	}
 
 	m.faction = util.FactionForRef(ref)
@@ -68,11 +70,11 @@ func NewUnitModel(ref util.UnitRef, mainModel *MainModel) *Unit {
 }
 
 type Unit struct {
-	ref         util.UnitRef
+	ref         types.UnitRef
 	name        string
 	description string
 	faction     string
-	properties  *util.UnitProperties
+	properties  *types.UnitProperties
 
 	mainModel *MainModel
 
@@ -161,17 +163,17 @@ func (m *Unit) View() string {
 		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, 35)), strconv.Itoa(m.properties.SightDistance)},
 	}
 
-	if m.properties.RadarDistance != nil {
-		stats = append(stats, []string{"Radar range", m.radarRange.ViewAs(m.PercentageWithBase(*m.properties.RadarDistance, 35)), strconv.Itoa(*m.properties.RadarDistance)})
+	if m.properties.RadarDistance != 0 {
+		stats = append(stats, []string{"Radar range", m.radarRange.ViewAs(m.PercentageWithBase(m.properties.RadarDistance, 35)), strconv.Itoa(m.properties.RadarDistance)})
 	}
-	if m.properties.JammerDistance != nil {
-		stats = append(stats, []string{"Jammer range", m.jammerRange.ViewAs(m.PercentageWithBase(*m.properties.JammerDistance, 10)), strconv.Itoa(*m.properties.JammerDistance)})
+	if m.properties.JammerDistance != 0 {
+		stats = append(stats, []string{"Jammer range", m.jammerRange.ViewAs(m.PercentageWithBase(m.properties.JammerDistance, 10)), strconv.Itoa(m.properties.JammerDistance)})
 	}
-	if m.properties.SonarDistance != nil {
-		stats = append(stats, []string{"Sonar range", m.sonarRange.ViewAs(m.PercentageWithBase(*m.properties.SonarDistance, 35)), strconv.Itoa(*m.properties.SonarDistance)})
+	if m.properties.SonarDistance != 0 {
+		stats = append(stats, []string{"Sonar range", m.sonarRange.ViewAs(m.PercentageWithBase(m.properties.SonarDistance, 35)), strconv.Itoa(m.properties.SonarDistance)})
 	}
-	if m.properties.Buildpower != nil {
-		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(*m.properties.Buildpower, 3)), strconv.Itoa(*m.properties.Buildpower)})
+	if m.properties.Buildpower != 0 {
+		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(m.properties.Buildpower, 3)), strconv.Itoa(m.properties.Buildpower)})
 	}
 
 	weaponStats := [][]string{

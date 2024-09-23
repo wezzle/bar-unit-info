@@ -1,17 +1,26 @@
-package util
+package parser
 
 import (
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/mattn/go-zglob"
+	"github.com/wezzle/bar-unit-info/gamedata/types"
 	lua "github.com/yuin/gopher-lua"
 )
 
-var (
-	UnitGrid          TUnitGrid
-	LabGrid           TLabGrid
-	unitPropertyCache = make(map[UnitRef]UnitProperties)
-)
+func IgnoreError[T any](key string, f func(string) (T, error)) T {
+	v, err := f(key)
+	if err != nil {
+		slog.Debug("ignored error", "error", err)
+	}
+	return v
+}
 
 func isScavengers(L *lua.LState) int {
 	L.Push(lua.LFalse)
@@ -33,30 +42,30 @@ func indexFromLValue(v lua.LValue) int {
 	return index - 1
 }
 
-func loadUnitGrid(v *lua.LTable) TUnitGrid {
-	grid := make(TUnitGrid)
+func loadUnitGrid(v *lua.LTable) types.UnitGrid {
+	grid := make(types.UnitGrid)
 
 	v.ForEach(func(k lua.LValue, v lua.LValue) {
-		constructor := Constructor(k.String())
-		grid[constructor] = make(Group, 4)
+		constructor := types.Constructor(k.String())
+		grid[constructor] = make(types.Group, 4)
 		v.(*lua.LTable).ForEach(func(k lua.LValue, group lua.LValue) {
 			groupIndex := indexFromLValue(k)
 			if groupIndex >= 4 {
 				return
 			}
-			grid[constructor][groupIndex] = make(GridRow, 3)
+			grid[constructor][groupIndex] = make(types.GridRow, 3)
 			group.(*lua.LTable).ForEach(func(k lua.LValue, units lua.LValue) {
 				rowIndex := indexFromLValue(k)
 				if rowIndex >= 3 {
 					return
 				}
-				grid[constructor][groupIndex][rowIndex] = make(GridCol, 4)
+				grid[constructor][groupIndex][rowIndex] = make(types.GridCol, 4)
 				units.(*lua.LTable).ForEach(func(k lua.LValue, unitName lua.LValue) {
 					colIndex := indexFromLValue(k)
 					if colIndex >= 4 {
 						return
 					}
-					grid[constructor][groupIndex][rowIndex][colIndex] = UnitRef(unitName.String())
+					grid[constructor][groupIndex][rowIndex][colIndex] = types.UnitRef(unitName.String())
 				})
 			})
 		})
@@ -65,14 +74,14 @@ func loadUnitGrid(v *lua.LTable) TUnitGrid {
 	return grid
 }
 
-func loadLabGrid(v *lua.LTable) TLabGrid {
-	grid := make(TLabGrid)
+func loadLabGrid(v *lua.LTable) types.LabGrid {
+	grid := make(types.LabGrid)
 
 	v.ForEach(func(k lua.LValue, v lua.LValue) {
-		lab := Constructor(k.String())
-		grid[lab] = make(GridRow, 3)
+		lab := types.Constructor(k.String())
+		grid[lab] = make(types.GridRow, 3)
 		for i := range grid[lab] {
-			grid[lab][i] = make(GridCol, 4)
+			grid[lab][i] = make(types.GridCol, 4)
 		}
 
 		rowIndex := 0
@@ -81,15 +90,15 @@ func loadLabGrid(v *lua.LTable) TLabGrid {
 			if colIndex%4 == 0 && colIndex != 0 {
 				rowIndex = rowIndex + 1
 			}
-			grid[lab][rowIndex][colIndex%4] = UnitRef(unitName.String())
+			grid[lab][rowIndex][colIndex%4] = types.UnitRef(unitName.String())
 		})
 	})
 
 	return grid
 }
 
-func LoadGridLayouts() {
-	fileContents, err := repoFiles.ReadFile("bar-repo/luaui/configs/gridmenu_layouts.lua")
+func LoadGridLayouts() (types.UnitGrid, types.LabGrid) {
+	fileContents, err := os.ReadFile(fmt.Sprintf("%s/%s", os.Getenv("GAME_REPO"), "luaui/configs/gridmenu_layouts.lua"))
 	if err != nil {
 		panic(err)
 	}
@@ -111,35 +120,99 @@ func LoadGridLayouts() {
 
 	lv := L.Get(-1).(*lua.LTable)
 
-	UnitGrid = loadUnitGrid(lv.RawGetString("UnitGrids").(*lua.LTable))
-	LabGrid = loadLabGrid(lv.RawGetString("LabGrids").(*lua.LTable))
+	unitGrid := loadUnitGrid(lv.RawGetString("UnitGrids").(*lua.LTable))
+	labGrid := loadLabGrid(lv.RawGetString("LabGrids").(*lua.LTable))
+	return unitGrid, labGrid
 }
 
-func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
-	if properties, ok := unitPropertyCache[ref]; ok {
-		return &properties, nil
+func LoadAllUnitProperties() []types.UnitProperties {
+	_, labGrid := LoadGridLayouts()
+
+	unitProperties := make([]types.UnitProperties, 0)
+	// upByRef := make(types.UnitPropertiesByRef)
+	files, err := zglob.Glob(fmt.Sprintf("%s/units/**/*.lua", os.Getenv("GAME_REPO")))
+	if err != nil {
+		slog.Error("failed to glob", "error", "err")
+		return nil
+	}
+	for _, f := range files {
+		ref := strings.TrimSuffix(filepath.Base(f), filepath.Ext(f))
+		content, err := os.ReadFile(f)
+		if err != nil {
+			slog.Error("failed to read file", "file", f)
+			continue
+		}
+		up, err := parseUnitProperties(string(content), ref)
+		if err != nil {
+			slog.Error("failed to parse unit properties", "ref", ref)
+			continue
+		}
+		unitProperties = append(unitProperties, *up)
+		// if _, ok := upByRef[ref]; ok {
+		// 	slog.Warn("overwriting existing ref", "ref", ref)
+		// }
+		// upByRef[ref] = *up
 	}
 
-	unitFilepath, err := findUnitPropertiesFile(ref)
-	if err != nil {
-		return nil, err
-	}
-	fileContents, err := repoFiles.ReadFile(unitFilepath)
-	if err != nil {
-		panic(err)
-	}
+	return fixTechLevel(unitProperties, labGrid)
+}
 
+// func findUnitPropertiesFile(ref types.UnitRef) (string, error) {
+// 	r, err := regexp.Compile(fmt.Sprintf("%s.lua$", ref))
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	file := ""
+// 	fileSystem := os.DirFS(os.Getenv("GAME_REPO"))
+// 	err = fs.WalkDir(fileSystem, "units", func(path string, d os.DirEntry, err error) error {
+// 		if err == nil && r.MatchString(path) {
+// 			file = path
+// 			return fs.SkipAll
+// 		}
+// 		return nil
+// 	})
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return file, nil
+// }
+
+// func loadUnitProperties(ref types.UnitRef) (*types.UnitProperties, error) {
+// 	unitFilepath, err := findUnitPropertiesFile(ref)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	fileContents, err := os.ReadFile(unitFilepath)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	return parseUnitProperties(string(fileContents), ref, nil)
+// }
+
+func parseUnitProperties(luaContent string, ref string) (*types.UnitProperties, error) {
 	L := lua.NewState()
 	defer L.Close()
 
-	if err := L.DoString(string(fileContents)); err != nil {
+	if err := L.DoString(luaContent); err != nil {
 		return nil, err
 	}
 
 	lv := L.Get(-1)
-	data := lv.(*lua.LTable).RawGetString(ref).(*lua.LTable)
+	t, ok := lv.(*lua.LTable)
+	if !ok {
+		return nil, fmt.Errorf("%s: file does not contain a lua table", ref)
+	}
+	lData := t.RawGetString(ref)
+	data, ok := lData.(*lua.LTable)
+	if !ok {
+		return nil, fmt.Errorf("%s: file does not contain a ref key with a lua table", ref)
+	}
 
-	properties := UnitProperties{}
+	properties := types.UnitProperties{
+		Ref: ref,
+	}
 
 	p := LuaTableParser{data}
 
@@ -159,16 +232,16 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 	properties.Health = IgnoreError("health", p.Int)
 	properties.SightDistance = int(IgnoreError("sightdistance", p.Float64))
 	properties.Speed = IgnoreError("speed", p.Float64)
-	properties.Buildpower = IgnoreError("workertime", p.OptionalInt)
-	properties.RadarDistance = IgnoreError("radardistance", p.OptionalInt)
-	properties.JammerDistance = IgnoreError("radardistancejam", p.OptionalInt)
-	properties.SonarDistance = IgnoreError("sonardistance", p.OptionalInt)
+	properties.Buildpower = IgnoreError("workertime", p.Int)
+	properties.RadarDistance = IgnoreError("radardistance", p.Int)
+	properties.JammerDistance = IgnoreError("radardistancejam", p.Int)
+	properties.SonarDistance = IgnoreError("sonardistance", p.Int)
 
 	// Build option slice
 	bo := data.RawGetString("buildoptions")
-	var buildOptions []UnitRef
+	var buildOptions []types.UnitRef
 	if bo.Type() == lua.LTTable {
-		buildOptions = make([]UnitRef, 0)
+		buildOptions = make([]types.UnitRef, 0)
 		bo.(*lua.LTable).ForEach(func(index lua.LValue, v lua.LValue) {
 			buildOptions = append(buildOptions, v.String())
 		})
@@ -176,59 +249,86 @@ func LoadUnitProperties(ref UnitRef) (*UnitProperties, error) {
 
 	// Custom params
 	cp := data.RawGetString("customparams")
-	customParams := CustomParams{}
+	customParams := types.CustomParams{}
 	if cp.Type() == lua.LTTable {
 		customParams.TechLevel, _ = strconv.Atoi(cp.(*lua.LTable).RawGetString("techlevel").String())
 		customParams.UnitGroup = cp.(*lua.LTable).RawGetString("unitgroup").String()
 	}
-	// Find lab that produces this one and get techlevel from that unit
-	if customParams.TechLevel == 0 && !strings.Contains(customParams.UnitGroup, "builder") {
-		found := false
-		for labRef := range LabGrid {
-			lp, _ := LoadUnitProperties(labRef)
-			for _, bo := range lp.BuildOptions {
-				if bo == ref {
-					found = true
-					customParams.TechLevel = lp.CustomParams.TechLevel
-					break
-				}
-			}
-			if found {
-				break
-			}
-		}
-	}
-	// Find a unit that produces this one and get techlevel from that unit
-	if customParams.TechLevel == 0 {
-		found := false
-		for ref, up := range unitPropertyCache {
-			for _, bo := range up.BuildOptions {
-				if bo == ref {
-					found = true
-					customParams.TechLevel = up.CustomParams.TechLevel
-					break
-				}
-			}
-			if found {
-				break
-			}
-		}
-	}
-	// Default tech level to 1 if not found
-	if customParams.TechLevel == 0 {
-		customParams.TechLevel = 1
-	}
 
 	properties.BuildOptions = buildOptions
-	properties.CustomParams = &customParams
+	properties.CustomParams = customParams
 	properties.WeaponDefs = ParseWeaponDefs(data)
 
-	unitPropertyCache[ref] = properties
 	return &properties, nil
 }
 
-func ParseWeaponDefs(data *lua.LTable) []WeaponDef {
-	defs := make([]WeaponDef, 0)
+func findUnitPropertiesByRef(unitProperties []types.UnitProperties, ref types.UnitRef) (*types.UnitProperties, bool) {
+	for _, up := range unitProperties {
+		if up.Ref == ref {
+			return &up, true
+		}
+	}
+	return nil, false
+}
+
+func fixTechLevel(unitProperties []types.UnitProperties, labGrid types.LabGrid) []types.UnitProperties {
+	fixedUnitProperties := make([]types.UnitProperties, len(unitProperties))
+	for _, up := range unitProperties {
+		ref := up.Ref
+
+		if up.CustomParams.TechLevel != 0 {
+			fixedUnitProperties = append(fixedUnitProperties, up)
+			continue
+		}
+
+		// Find lab that produces this one and get techlevel from that unit
+		if !strings.Contains(up.CustomParams.UnitGroup, "builder") {
+			found := false
+			for labRef := range labGrid {
+				lp, ok := findUnitPropertiesByRef(unitProperties, labRef)
+				if !ok {
+					slog.Warn("failed to find properties for lab that exists in grid layout", "lab", labRef)
+					continue
+				}
+				for _, bo := range lp.BuildOptions {
+					if bo == ref {
+						found = true
+						up.CustomParams.TechLevel = lp.CustomParams.TechLevel
+						break
+					}
+				}
+				if found {
+					break
+				}
+			}
+		}
+
+		// Find a unit that produces this one and get techlevel from that unit
+		found := false
+		for _, upp := range unitProperties {
+			for _, bo := range upp.BuildOptions {
+				if bo == ref {
+					found = true
+					up.CustomParams.TechLevel = upp.CustomParams.TechLevel
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+		// Default tech level to 1 if not found
+		if up.CustomParams.TechLevel == 0 {
+			up.CustomParams.TechLevel = 1
+		}
+
+		fixedUnitProperties = append(fixedUnitProperties, up)
+	}
+	return fixedUnitProperties
+}
+
+func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
+	defs := make([]types.WeaponDef, 0)
 	wd := data.RawGetString("weapondefs")
 	if wd.Type() != lua.LTTable {
 		return nil
@@ -238,7 +338,7 @@ func ParseWeaponDefs(data *lua.LTable) []WeaponDef {
 		vT := v.(*lua.LTable)
 		p := LuaTableParser{vT}
 		damage := IgnoreError("damage", p.Table)
-		def := WeaponDef{
+		def := types.WeaponDef{
 			Name:             IgnoreError("name", p.String),
 			WeaponType:       IgnoreError("weapontype", p.String),
 			Id:               IgnoreError("id", p.Int),
@@ -256,7 +356,7 @@ func ParseWeaponDefs(data *lua.LTable) []WeaponDef {
 			CollideNonTarget: IgnoreError("collidenontarget", p.Bool),
 			CollideGround:    IgnoreError("collideground", p.Bool),
 			CollideCloaked:   IgnoreError("collidecloaked", p.Bool),
-			Damage: Damage{
+			Damage: types.Damage{
 				Default: IgnoreError("default", damage.Float64),
 			},
 			ExplosionSpeed:           IgnoreError("explosionspeed", p.Float64),
@@ -343,12 +443,12 @@ func ParseWeaponDefs(data *lua.LTable) []WeaponDef {
 			DynDamageExp:             IgnoreError("dyndamageexp", p.Float64),
 			DynDamageMin:             IgnoreError("dyndamagemin", p.Float64),
 			DynDamageRange:           IgnoreError("dyndamagerange", p.Float64),
-			Shield:                   Shield{},
+			Shield:                   types.Shield{},
 			RechargeDelay:            IgnoreError("rechargedelay", p.Float64),
 			Model:                    IgnoreError("model", p.String),
 			Size:                     IgnoreError("size", p.Float64),
 			ScarGlowColorMap:         IgnoreError("scarglowcolormap", p.String),
-			ScarIndices:              ScarIndices{},
+			ScarIndices:              types.ScarIndices{},
 			ExplosionScar:            IgnoreError("explosionscar", p.Bool),
 			ScarDiameter:             IgnoreError("scardiameter", p.Float64),
 			ScarAlpha:                IgnoreError("scaralpha", p.Float64),
@@ -400,4 +500,17 @@ func ParseWeaponDefs(data *lua.LTable) []WeaponDef {
 		defs = append(defs, def)
 	})
 	return defs
+}
+
+func LoadTranslations(lang string) (t types.Translations) {
+	f, err := os.Open(fmt.Sprintf("%s/language/%s/units.json", os.Getenv("GAME_REPO"), lang))
+	if err != nil {
+		panic(err)
+	}
+	decoder := json.NewDecoder(f)
+	err = decoder.Decode(&t)
+	if err != nil {
+		panic(err)
+	}
+	return
 }

@@ -1,16 +1,17 @@
-package util
+package types
 
 type (
-	UnitRef     = string
-	GridCol     []UnitRef
-	GridRow     []GridCol
-	Group       []GridRow
-	Constructor = UnitRef
-	TUnitGrid   map[Constructor]Group
-	Lab         = UnitRef
-	TLabGrid    map[Lab]GridRow
-	WeaponType  = string
-	Damage      struct {
+	UnitPropertiesByRef = map[string]*UnitProperties
+	UnitRef             = string
+	GridCol             []UnitRef
+	GridRow             []GridCol
+	Group               []GridRow
+	Constructor         = UnitRef
+	UnitGrid            map[Constructor]Group
+	Lab                 = UnitRef
+	LabGrid             map[Lab]GridRow
+	WeaponType          = string
+	Damage              struct {
 		Default float64
 	}
 	ScarIndices struct{}
@@ -189,6 +190,7 @@ type (
 		UnitGroup string
 	}
 	UnitProperties struct {
+		Ref            UnitRef
 		MetalCost      int
 		EnergyCost     int
 		Buildtime      int
@@ -196,14 +198,14 @@ type (
 		Health         int
 		SightDistance  int
 		Speed          float64
-		Buildpower     *int
-		SonarDistance  *int
-		RadarDistance  *int
-		JammerDistance *int
+		Buildpower     int
+		SonarDistance  int
+		RadarDistance  int
+		JammerDistance int
 		WeaponDefs     []WeaponDef
-		CustomParams   *CustomParams
+		CustomParams   CustomParams
 	}
-	TranslationsT struct {
+	Translations struct {
 		Units struct {
 			Factions                  map[string]string  `json:"factions"`
 			Dead                      string             `json:"dead"`

@@ -15,6 +15,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/wezzle/bar-unit-info/bubbles/table"
+	"github.com/wezzle/bar-unit-info/gamedata"
+	"github.com/wezzle/bar-unit-info/gamedata/types"
 	"github.com/wezzle/bar-unit-info/util"
 )
 
@@ -81,7 +83,7 @@ const (
 
 func ValueForRowAndColumn(row table.Row, column ColumnWithType, columnIndex int) any {
 	ref := row[0]
-	properties, _ := util.LoadUnitProperties(ref)
+	properties, _ := gamedata.GetUnitPropertiesByRef(ref)
 	val := column.ValueByPropertyKey(properties)
 	if val == nil {
 		return row[columnIndex]
@@ -95,7 +97,7 @@ type ColumnWithType struct {
 	PropertyKey string
 }
 
-func (c *ColumnWithType) ValueByPropertyKey(p *util.UnitProperties) any {
+func (c *ColumnWithType) ValueByPropertyKey(p *types.UnitProperties) any {
 	switch c.PropertyKey {
 	case "metalcost":
 		return p.MetalCost
@@ -218,36 +220,36 @@ func NewTableModel(mainModel *MainModel) Table {
 	}
 	tableWidth = tableWidth + defaultBorderWidth*2
 
-	buildableUnits := make([]util.UnitRef, 0)
-	properties := make(map[util.UnitRef]*util.UnitProperties)
+	buildableUnits := make([]types.UnitRef, 0)
+	properties := make(types.UnitPropertiesByRef)
 	rows := make([]table.Row, 0)
 
 	// Use labs to find buildable units
-	for ref := range util.LabGrid {
-		up, err := util.LoadUnitProperties(ref)
-		if err != nil {
+	for ref := range gamedata.GetLabGrid() {
+		up, ok := gamedata.GetUnitPropertiesByRef(ref)
+		if !ok {
 			continue
 		}
-		for _, ref := range up.BuildOptions {
-			unitProperties, err := util.LoadUnitProperties(ref)
-			if err != nil {
+		for _, boRef := range up.BuildOptions {
+			boUp, ok := gamedata.GetUnitPropertiesByRef(boRef)
+			if !ok {
 				continue
 			}
-			buildableUnits = append(buildableUnits, ref)
-			properties[ref] = unitProperties
+			buildableUnits = append(buildableUnits, boRef)
+			properties[boRef] = boUp
 		}
 	}
 
 	// Check all buildable units for buildable units of their own
 	for _, ref := range buildableUnits {
 		up := properties[ref]
-		for _, r := range up.BuildOptions {
-			unitProperties, err := util.LoadUnitProperties(r)
-			if err != nil {
+		for _, boRef := range up.BuildOptions {
+			boUp, ok := gamedata.GetUnitPropertiesByRef(boRef)
+			if !ok {
 				continue
 			}
-			buildableUnits = append(buildableUnits, r)
-			properties[r] = unitProperties
+			buildableUnits = append(buildableUnits, boRef)
+			properties[boRef] = boUp
 		}
 	}
 
@@ -306,19 +308,20 @@ func NewTableModel(mainModel *MainModel) Table {
 	ti.Prompt = "/ "
 
 	return Table{
-		Table:         t,
-		FilterInput:   ti,
-		SortCol:       0,
-		SelectedCol:   0,
-		Reverse:       false,
-		DialogShown:   false,
-		FilterMode:    false,
-		mainModel:     mainModel,
-		help:          help.New(),
-		tableWidth:    tableWidth,
-		columns:       columns,
-		rows:          rows,
-		columnFilters: make([]string, len(columns)),
+		Table:               t,
+		FilterInput:         ti,
+		SortCol:             0,
+		SelectedCol:         0,
+		Reverse:             false,
+		DialogShown:         false,
+		FilterMode:          false,
+		mainModel:           mainModel,
+		help:                help.New(),
+		tableWidth:          tableWidth,
+		columns:             columns,
+		rows:                rows,
+		columnFilters:       make([]string, len(columns)),
+		unitPropertiesByRef: properties,
 	}
 }
 
@@ -337,10 +340,11 @@ type Table struct {
 	height     int
 	tableWidth int
 
-	columns       []ColumnWithType
-	columnFilters []string
-	rows          []table.Row
-	selectedRows  []string
+	columns             []ColumnWithType
+	columnFilters       []string
+	rows                []table.Row
+	selectedRows        []string
+	unitPropertiesByRef types.UnitPropertiesByRef
 }
 
 func (m *Table) FilterRows(cf []string) {
@@ -463,7 +467,7 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			selectedIsChosen := len(m.selectedRows) == 1 && m.selectedRows[0] == selectedRef
 			if len(m.selectedRows) > 0 && !selectedIsChosen {
 				if !slices.Contains(m.selectedRows, selectedRef) {
-					m.selectedRows = append(m.selectedRows)
+					m.selectedRows = append(m.selectedRows, selectedRef)
 					m.SetHighlightedRows()
 				}
 				return NewCompareModel(m.mainModel, m.selectedRows...), cmd

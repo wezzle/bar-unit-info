@@ -1,7 +1,6 @@
 package util
 
 import (
-	"encoding/json"
 	"fmt"
 	"image"
 	"io/fs"
@@ -9,37 +8,24 @@ import (
 	"regexp"
 
 	"github.com/lukegb/dds"
+	"github.com/wezzle/bar-unit-info/gamedata"
+	"github.com/wezzle/bar-unit-info/gamedata/types"
 )
 
-var Translations TranslationsT
-
-func LoadTranslations(lang string) TranslationsT {
-	f, err := repoFiles.Open(fmt.Sprintf("bar-repo/language/%s/units.json", lang))
-	if err != nil {
-		panic(err)
-	}
-	decoder := json.NewDecoder(f)
-	err = decoder.Decode(&Translations)
-	if err != nil {
-		panic(err)
-	}
-	return Translations
+func NameForRef(ref types.UnitRef) string {
+	return gamedata.GetTranslations().Units.Names[ref]
 }
 
-func NameForRef(ref UnitRef) string {
-	return Translations.Units.Names[ref]
+func DescriptionForRef(ref types.UnitRef) string {
+	return gamedata.GetTranslations().Units.Descriptions[ref]
 }
 
-func DescriptionForRef(ref UnitRef) string {
-	return Translations.Units.Descriptions[ref]
-}
-
-func FactionForRef(ref UnitRef) string {
+func FactionForRef(ref types.UnitRef) string {
 	shortcode := ref[0:3]
-	return Translations.Units.Factions[shortcode]
+	return gamedata.GetTranslations().Units.Factions[shortcode]
 }
 
-func LoadImage(ref UnitRef) image.Image {
+func LoadImage(ref types.UnitRef) image.Image {
 	r, err := os.Open(fmt.Sprintf("./bar-repo/unitpics/%s.dds", ref))
 	if err != nil {
 		return nil
@@ -51,7 +37,7 @@ func LoadImage(ref UnitRef) image.Image {
 	return img
 }
 
-func findUnitPropertiesFile(ref UnitRef) (string, error) {
+func findUnitPropertiesFile(ref types.UnitRef) (string, error) {
 	r, err := regexp.Compile(fmt.Sprintf("%s.lua$", ref))
 	if err != nil {
 		return "", err

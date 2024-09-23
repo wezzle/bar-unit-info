@@ -1,0 +1,28 @@
+package gamedata
+
+import "github.com/wezzle/bar-unit-info/gamedata/types"
+
+var UnitPropertiesByRef types.UnitPropertiesByRef = make(types.UnitPropertiesByRef)
+
+func BuildUnitPropertiesRefMap() {
+    for i, up := range unitPropertiesData {
+        UnitPropertiesByRef[up.Ref] = &unitPropertiesData[i]
+    }
+}
+
+func GetUnitProperties() types.UnitPropertiesByRef {
+    if len(UnitPropertiesByRef) == 0 {
+        BuildUnitPropertiesRefMap()
+    }
+	return UnitPropertiesByRef
+}
+
+func GetUnitPropertiesByRef(ref string) (*types.UnitProperties, bool) {
+    if len(UnitPropertiesByRef) == 0 {
+        BuildUnitPropertiesRefMap()
+    }
+	up, ok := UnitPropertiesByRef[ref]
+    return up, ok
+}
+
+var unitPropertiesData [{{.Len}}]types.UnitProperties = {{.Var}}
