@@ -46,7 +46,7 @@ func NewUnitModel(ref types.UnitRef, mainModel *MainModel) *Unit {
 	m.name = util.NameForRef(ref)
 	m.description = util.DescriptionForRef(ref)
 	var ok bool
-	m.properties, ok = gamedata.GetUnitProperties(ref)
+	m.properties, ok = gamedata.GetUnitPropertiesByRef(ref)
 	if !ok {
 		panic("unit properties file not generated")
 	}
@@ -74,7 +74,7 @@ type Unit struct {
 	name        string
 	description string
 	faction     string
-	properties  types.UnitProperties
+	properties  *types.UnitProperties
 
 	mainModel *MainModel
 

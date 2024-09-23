@@ -36,6 +36,7 @@ func main() {
 
 		data := struct {
 			Var string
+			Len int
 		}{}
 		switch filename {
 		case "labgrid.go":
@@ -45,8 +46,9 @@ func main() {
 			unitGrid, _ := parser.LoadGridLayouts()
 			data.Var = fmt.Sprintf("%#v\n", unitGrid)
 		case "unitproperties.go":
-			upByRef := parser.LoadAllUnitProperties()
-			data.Var = fmt.Sprintf("%#v\n", upByRef)
+			unitProperties := parser.LoadAllUnitProperties()
+			data.Len = len(unitProperties)
+			data.Var = strings.Replace(fmt.Sprintf("%#v\n", unitProperties), "[]types.UnitProperties{", fmt.Sprintf("[%d]types.UnitProperties{", data.Len), 1)
 		case "translations.go":
 			t := parser.LoadTranslations("en")
 			data.Var = fmt.Sprintf("%#v\n", t)

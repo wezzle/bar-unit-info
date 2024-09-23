@@ -125,10 +125,11 @@ func LoadGridLayouts() (types.UnitGrid, types.LabGrid) {
 	return unitGrid, labGrid
 }
 
-func LoadAllUnitProperties() types.UnitPropertiesByRef {
+func LoadAllUnitProperties() []types.UnitProperties {
 	_, labGrid := LoadGridLayouts()
 
-	upByRef := make(types.UnitPropertiesByRef)
+	unitProperties := make([]types.UnitProperties, 0)
+	// upByRef := make(types.UnitPropertiesByRef)
 	files, err := zglob.Glob(fmt.Sprintf("%s/units/**/*.lua", os.Getenv("GAME_REPO")))
 	if err != nil {
 		slog.Error("failed to glob", "error", "err")
@@ -146,13 +147,14 @@ func LoadAllUnitProperties() types.UnitPropertiesByRef {
 			slog.Error("failed to parse unit properties", "ref", ref)
 			continue
 		}
-		if _, ok := upByRef[ref]; ok {
-			slog.Warn("overwriting existing ref", "ref", ref)
-		}
-		upByRef[ref] = *up
+		unitProperties = append(unitProperties, *up)
+		// if _, ok := upByRef[ref]; ok {
+		// 	slog.Warn("overwriting existing ref", "ref", ref)
+		// }
+		// upByRef[ref] = *up
 	}
 
-	return fixTechLevel(upByRef, labGrid)
+	return fixTechLevel(unitProperties, labGrid)
 }
 
 // func findUnitPropertiesFile(ref types.UnitRef) (string, error) {
@@ -208,7 +210,9 @@ func parseUnitProperties(luaContent string, ref string) (*types.UnitProperties, 
 		return nil, fmt.Errorf("%s: file does not contain a ref key with a lua table", ref)
 	}
 
-	properties := types.UnitProperties{}
+	properties := types.UnitProperties{
+		Ref: ref,
+	}
 
 	p := LuaTableParser{data}
 
@@ -258,9 +262,22 @@ func parseUnitProperties(luaContent string, ref string) (*types.UnitProperties, 
 	return &properties, nil
 }
 
-func fixTechLevel(upByRef types.UnitPropertiesByRef, labGrid types.LabGrid) types.UnitPropertiesByRef {
-	for ref, up := range upByRef {
+func findUnitPropertiesByRef(unitProperties []types.UnitProperties, ref types.UnitRef) (*types.UnitProperties, bool) {
+	for _, up := range unitProperties {
+		if up.Ref == ref {
+			return &up, true
+		}
+	}
+	return nil, false
+}
+
+func fixTechLevel(unitProperties []types.UnitProperties, labGrid types.LabGrid) []types.UnitProperties {
+	fixedUnitProperties := make([]types.UnitProperties, len(unitProperties))
+	for _, up := range unitProperties {
+		ref := up.Ref
+
 		if up.CustomParams.TechLevel != 0 {
+			fixedUnitProperties = append(fixedUnitProperties, up)
 			continue
 		}
 
@@ -268,7 +285,7 @@ func fixTechLevel(upByRef types.UnitPropertiesByRef, labGrid types.LabGrid) type
 		if !strings.Contains(up.CustomParams.UnitGroup, "builder") {
 			found := false
 			for labRef := range labGrid {
-				lp, ok := upByRef[labRef]
+				lp, ok := findUnitPropertiesByRef(unitProperties, labRef)
 				if !ok {
 					slog.Warn("failed to find properties for lab that exists in grid layout", "lab", labRef)
 					continue
@@ -288,7 +305,7 @@ func fixTechLevel(upByRef types.UnitPropertiesByRef, labGrid types.LabGrid) type
 
 		// Find a unit that produces this one and get techlevel from that unit
 		found := false
-		for _, upp := range upByRef {
+		for _, upp := range unitProperties {
 			for _, bo := range upp.BuildOptions {
 				if bo == ref {
 					found = true
@@ -304,8 +321,10 @@ func fixTechLevel(upByRef types.UnitPropertiesByRef, labGrid types.LabGrid) type
 		if up.CustomParams.TechLevel == 0 {
 			up.CustomParams.TechLevel = 1
 		}
+
+		fixedUnitProperties = append(fixedUnitProperties, up)
 	}
-	return upByRef
+	return fixedUnitProperties
 }
 
 func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {

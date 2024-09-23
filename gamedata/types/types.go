@@ -1,7 +1,7 @@
 package types
 
 type (
-	UnitPropertiesByRef = map[string]UnitProperties
+	UnitPropertiesByRef = map[string]*UnitProperties
 	UnitRef             = string
 	GridCol             []UnitRef
 	GridRow             []GridCol
@@ -190,6 +190,7 @@ type (
 		UnitGroup string
 	}
 	UnitProperties struct {
+		Ref            UnitRef
 		MetalCost      int
 		EnergyCost     int
 		Buildtime      int
