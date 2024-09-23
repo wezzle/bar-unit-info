@@ -23,44 +23,40 @@
 
     # Nixpkgs instantiated for supported system types.
     nixpkgsFor = forAllSystems (system: import nixpkgs {inherit system;});
-  in {
-    # Provide some binary packages for selected system types.
-    packages = forAllSystems (system: let
-      pkgs = nixpkgsFor.${system};
-    in {
-      bar-unit-info = pkgs.buildGoModule {
-        pname = "bar-unit-info";
-        inherit version;
-        # In 'nix develop', we don't need a copy of the source tree
-        # in the Nix store.
-        src = ./.;
 
-        # This hash locks the dependencies of this package. It is
-        # necessary because of how Go requires network access to resolve
-        # VCS.  See https://www.tweag.io/blog/2021-03-04-gomod2nix/ for
-        # details. Normally one can build with a fake hash and rely on native Go
-        # mechanisms to tell you what the hash should be or determine what
-        # it should be "out-of-band" with other tooling (eg. gomod2nix).
-        # To begin with it is recommended to set this, but one must
-        # remember to bump this hash when your dependencies change.
-        # vendorHash = pkgs.lib.fakeHash;
-        #
-        vendorHash = "sha256-RmiEm0l/SKZmgAc5u6QeaNqg/UgcyeRSntjTPyj2ZMA=";
-      };
-    });
-
-    # Add dependencies that are only needed for development
-    devShells = forAllSystems (system: let
-      pkgs = nixpkgsFor.${system};
-      barRepo = pkgs.fetchgit {
+    barRepoWithPkgs = pkgs:
+      pkgs.fetchgit {
         url = "https://github.com/beyond-all-reason/Beyond-All-Reason.git";
         sparseCheckout = [
           "units"
           "language/en"
           "luaui/configs"
         ];
-        hash = "sha256-Uw8X4tXrXub4AVwRhDT9KZqrBFgkOvxeDPD6XsD7hvQ=";
+        hash = "sha256-M7XEEaCyd7Lk1QmcKBkNSlS8BqSJqEhOGwee+T9Hyes=";
       };
+  in {
+    # Provide some binary packages for selected system types.
+    packages = forAllSystems (system: let
+      pkgs = nixpkgsFor.${system};
+      barRepo = barRepoWithPkgs pkgs;
+    in {
+      bar-unit-info = pkgs.buildGoModule {
+        pname = "bar-unit-info";
+        inherit version;
+        src = ./.;
+        # vendorHash = pkgs.lib.fakeHash;
+        vendorHash = "sha256-RmiEm0l/SKZmgAc5u6QeaNqg/UgcyeRSntjTPyj2ZMA=";
+
+        # nativeBuildInputs = [barRepo];
+        postConfigure = ''
+          GAME_REPO=${barRepo} go generate ./...
+        '';
+      };
+    });
+
+    devShells = forAllSystems (system: let
+      pkgs = nixpkgsFor.${system};
+      barRepo = barRepoWithPkgs pkgs;
     in {
       default = pkgs.mkShell {
         buildInputs = with pkgs; [go just lua lua54Packages.dkjson jq barRepo];
@@ -71,9 +67,6 @@
       };
     });
 
-    # The default package for 'nix build'. This makes sense if the
-    # flake provides only one package or there is a clear "main"
-    # package.
     defaultPackage = forAllSystems (system: self.packages.${system}.bar-unit-info);
   };
 }
