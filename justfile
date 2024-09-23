@@ -15,17 +15,5 @@ file key:
 data key:
   cat `just file {{key}}`
 
-data-json key:
-  lua tojson.lua `just file {{key}} | sed 's/.lua//'`
-
-data-json-by-name name:
-  #!/usr/bin/env bash
-  set -euxo pipefail
-  key=`just find-by-name {{name}}`
-  lua tojson.lua `just file $key | sed 's/.lua//'` | jq '.[] | { metalcost: .metalcost, energycost: .energycost, buildtime: (.buildtime/100) }'
-
 run:
   go run *.go
-
-table:
-  go run cmd/table/table.go
