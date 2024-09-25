@@ -25,11 +25,13 @@ jobs:
       - name: Switch SSH to HTTPS clone url
         run: git config --global url."https://github.com/".insteadOf "git@github.com:"
       - name: Fetch bar-repo
-        run: just init
+        run: just bar-repo
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: stable
+      - name: Run generate
+        run: just generate
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
