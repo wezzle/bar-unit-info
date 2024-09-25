@@ -436,7 +436,7 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 			StockpileTime:            IgnoreError("stockpiletime", p.Float64),
 			Targetable:               IgnoreError("targetable", p.Int64),
 			Interceptor:              IgnoreError("interceptor", p.Int64),
-			InterceptedByShieldType:  IgnoreError("interceptedbyshieldtype", p.Int6464),
+			InterceptedByShieldType:  IgnoreError("interceptedbyshieldtype", p.Int64),
 			Coverage:                 IgnoreError("coverage", p.Float64),
 			InterceptSolo:            IgnoreError("interceptsolo", p.Bool),
 			DynDamageInverted:        IgnoreError("dyndamageinverted", p.Bool),

@@ -123,7 +123,7 @@ type (
 		Stockpile                bool
 		StockpileTime            float64
 		Targetable               int64
-		Interceptor              int
+		Interceptor              int64
 		InterceptedByShieldType  int64
 		Coverage                 float64
 		InterceptSolo            bool
