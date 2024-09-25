@@ -199,7 +199,7 @@ func NewTableModel(mainModel *MainModel) Table {
 	columns := []ColumnWithType{
 		{Column: table.Column{Title: "Ref ▼ •", Width: 20}, Type: CTString},
 		{Column: table.Column{Title: "Name", Width: 30}, Type: CTString},
-		{Column: table.Column{Title: "Tech level", Width: 15}, Type: CTInt64, PropertyKey: "techlevel"},
+		{Column: table.Column{Title: "Tech level", Width: 15}, Type: CTInt, PropertyKey: "techlevel"},
 		{Column: table.Column{Title: "Metal cost", Width: 15}, Type: CTInt64, PropertyKey: "metalcost"},
 		{Column: table.Column{Title: "Energy cost", Width: 15}, Type: CTInt64, PropertyKey: "energycost"},
 		{Column: table.Column{Title: "Buildtime", Width: 15}, Type: CTInt64, PropertyKey: "buildtime"},
