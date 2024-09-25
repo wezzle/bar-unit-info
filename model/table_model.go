@@ -78,6 +78,7 @@ type ColumnType int
 const (
 	CTString ColumnType = iota
 	CTInt
+	CTInt64
 	CTFloat
 )
 
@@ -198,12 +199,12 @@ func NewTableModel(mainModel *MainModel) Table {
 	columns := []ColumnWithType{
 		{Column: table.Column{Title: "Ref ▼ •", Width: 20}, Type: CTString},
 		{Column: table.Column{Title: "Name", Width: 30}, Type: CTString},
-		{Column: table.Column{Title: "Tech level", Width: 15}, Type: CTInt, PropertyKey: "techlevel"},
-		{Column: table.Column{Title: "Metal cost", Width: 15}, Type: CTInt, PropertyKey: "metalcost"},
-		{Column: table.Column{Title: "Energy cost", Width: 15}, Type: CTInt, PropertyKey: "energycost"},
-		{Column: table.Column{Title: "Buildtime", Width: 15}, Type: CTInt, PropertyKey: "buildtime"},
-		{Column: table.Column{Title: "Health", Width: 15}, Type: CTInt, PropertyKey: "health"},
-		{Column: table.Column{Title: "Sight range", Width: 15}, Type: CTInt, PropertyKey: "sightdistance"},
+		{Column: table.Column{Title: "Tech level", Width: 15}, Type: CTInt64, PropertyKey: "techlevel"},
+		{Column: table.Column{Title: "Metal cost", Width: 15}, Type: CTInt64, PropertyKey: "metalcost"},
+		{Column: table.Column{Title: "Energy cost", Width: 15}, Type: CTInt64, PropertyKey: "energycost"},
+		{Column: table.Column{Title: "Buildtime", Width: 15}, Type: CTInt64, PropertyKey: "buildtime"},
+		{Column: table.Column{Title: "Health", Width: 15}, Type: CTInt64, PropertyKey: "health"},
+		{Column: table.Column{Title: "Sight range", Width: 15}, Type: CTInt64, PropertyKey: "sightdistance"},
 		{Column: table.Column{Title: "Speed", Width: 15}, Type: CTFloat, PropertyKey: "speed"},
 	}
 
@@ -266,11 +267,11 @@ func NewTableModel(mainModel *MainModel) Table {
 			ref,
 			util.NameForRef(ref),
 			fmt.Sprintf("T%d", up.CustomParams.TechLevel),
-			strconv.Itoa(up.MetalCost),
-			strconv.Itoa(up.EnergyCost),
+			strconv.FormatInt(up.MetalCost, 10),
+			strconv.FormatInt(up.EnergyCost, 10),
 			d.String(),
-			strconv.Itoa(up.Health),
-			strconv.Itoa(up.SightDistance),
+			strconv.FormatInt(up.Health, 10),
+			strconv.FormatInt(up.SightDistance, 10),
 			strconv.FormatFloat(up.Speed, 'f', 1, 64),
 		})
 	}
@@ -366,6 +367,17 @@ func (m *Table) FilterRows(cf []string) {
 				val := ValueForRowAndColumn(r, m.columns[colIndex], colIndex).(int)
 				cleanFilterString := string(regexp.MustCompile("[><= ]+").ReplaceAll([]byte(f), []byte("")))
 				filterVal, _ := strconv.Atoi(cleanFilterString)
+				if strings.Contains(f, ">") {
+					found = val > filterVal
+				} else if strings.Contains(f, "<") {
+					found = val < filterVal
+				} else {
+					found = val == filterVal
+				}
+			case CTInt64:
+				val := ValueForRowAndColumn(r, m.columns[colIndex], colIndex).(int64)
+				cleanFilterString := string(regexp.MustCompile("[><= ]+").ReplaceAll([]byte(f), []byte("")))
+				filterVal, _ := strconv.ParseInt(cleanFilterString, 10, 64)
 				if strings.Contains(f, ">") {
 					found = val > filterVal
 				} else if strings.Contains(f, "<") {
@@ -529,6 +541,8 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				switch t {
 				case CTInt:
 					isLess = iVal.(int) < jVal.(int)
+				case CTInt64:
+					isLess = iVal.(int64) < jVal.(int64)
 				case CTFloat:
 					isLess = iVal.(float64) < jVal.(float64)
 				default:

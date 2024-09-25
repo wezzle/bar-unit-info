@@ -218,24 +218,24 @@ func parseUnitProperties(luaContent string, ref string) (*types.UnitProperties, 
 
 	// Simple stats assignments
 
-	properties.MetalCost = IgnoreError("metalcost", p.Int)
+	properties.MetalCost = IgnoreError("metalcost", p.Int64)
 	if properties.MetalCost == 0 {
-		properties.MetalCost = IgnoreError("buildcostmetal", p.Int)
+		properties.MetalCost = IgnoreError("buildcostmetal", p.Int64)
 	}
 
-	properties.EnergyCost = IgnoreError("energycost", p.Int)
+	properties.EnergyCost = IgnoreError("energycost", p.Int64)
 	if properties.EnergyCost == 0 {
-		properties.EnergyCost = IgnoreError("buildcostenergy", p.Int)
+		properties.EnergyCost = IgnoreError("buildcostenergy", p.Int64)
 	}
 
-	properties.Buildtime = IgnoreError("buildtime", p.Int)
-	properties.Health = IgnoreError("health", p.Int)
-	properties.SightDistance = int(IgnoreError("sightdistance", p.Float64))
+	properties.Buildtime = IgnoreError("buildtime", p.Int64)
+	properties.Health = IgnoreError("health", p.Int64)
+	properties.SightDistance = int64(IgnoreError("sightdistance", p.Float64))
 	properties.Speed = IgnoreError("speed", p.Float64)
-	properties.Buildpower = IgnoreError("workertime", p.Int)
-	properties.RadarDistance = IgnoreError("radardistance", p.Int)
-	properties.JammerDistance = IgnoreError("radardistancejam", p.Int)
-	properties.SonarDistance = IgnoreError("sonardistance", p.Int)
+	properties.Buildpower = IgnoreError("workertime", p.Int64)
+	properties.RadarDistance = IgnoreError("radardistance", p.Int64)
+	properties.JammerDistance = IgnoreError("radardistancejam", p.Int64)
+	properties.SonarDistance = IgnoreError("sonardistance", p.Int64)
 
 	// Build option slice
 	bo := data.RawGetString("buildoptions")
@@ -341,7 +341,7 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 		def := types.WeaponDef{
 			Name:             IgnoreError("name", p.String),
 			WeaponType:       IgnoreError("weapontype", p.String),
-			Id:               IgnoreError("id", p.Int),
+			Id:               IgnoreError("id", p.Int64),
 			CustomParams:     map[string]string{},
 			AvoidFriendly:    IgnoreError("avoidfriendly", p.Bool),
 			AvoidFeature:     IgnoreError("avoidfeature", p.Bool),
@@ -372,13 +372,13 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 			Weaponacceleration:       IgnoreError("weaponacceleration", p.Float64),
 			ReloadTime:               IgnoreError("reloadtime", p.Float64),
 			BurstRate:                IgnoreError("burstrate", p.Float64),
-			Burst:                    IgnoreError("burst", p.Int),
-			Projectiles:              IgnoreError("projectiles", p.Int),
+			Burst:                    IgnoreError("burst", p.Int64),
+			Projectiles:              IgnoreError("projectiles", p.Int64),
 			WaterBounce:              IgnoreError("waterbounce", p.Bool),
 			GroundBounce:             IgnoreError("groundbounce", p.Bool),
 			BounceSlip:               IgnoreError("bounceslip", p.Float64),
 			BounceRebound:            IgnoreError("bouncerebound", p.Float64),
-			NumBounce:                IgnoreError("numbounce", p.Int),
+			NumBounce:                IgnoreError("numbounce", p.Int64),
 			ImpulseFactor:            IgnoreError("impulsefactor", p.Float64),
 			ImpulseBoost:             IgnoreError("impulseboost", p.Float64),
 			CraterMult:               IgnoreError("cratermult", p.Float64),
@@ -396,7 +396,7 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 			FixedLauncher:            IgnoreError("fixedlauncher", p.Bool),
 			Tolerance:                IgnoreError("tolerance", p.Float64),
 			Firetolerance:            IgnoreError("firetolerance", p.Float64),
-			HighTrajectory:           IgnoreError("hightrajectory", p.Int),
+			HighTrajectory:           IgnoreError("hightrajectory", p.Int64),
 			TrajectoryHeight:         IgnoreError("trajectoryheight", p.Float64),
 			Tracks:                   IgnoreError("tracks", p.Bool),
 			Wobble:                   IgnoreError("wobble", p.Float64),
@@ -422,7 +422,7 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 			Duration:                 IgnoreError("duration", p.Float64),
 			Beamtime:                 IgnoreError("beamtime", p.Float64),
 			Beamburst:                IgnoreError("beamburst", p.Bool),
-			BeamTTL:                  IgnoreError("beamttl", p.Int),
+			BeamTTL:                  IgnoreError("beamttl", p.Int64),
 			SweepFire:                IgnoreError("sweepfire", p.Bool),
 			LargeBeamLaser:           IgnoreError("largebeamlaser", p.Bool),
 			SizeGrowth:               IgnoreError("sizegrowth", p.Float64),
@@ -431,12 +431,12 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 			EnergyPerShot:            IgnoreError("energypershot", p.Float64),
 			FireStarter:              IgnoreError("firestarter", p.Float64),
 			Paralyzer:                IgnoreError("paralyzer", p.Bool),
-			ParalyzeTime:             IgnoreError("paralyzetime", p.Int),
+			ParalyzeTime:             IgnoreError("paralyzetime", p.Int64),
 			Stockpile:                IgnoreError("stockpile", p.Bool),
 			StockpileTime:            IgnoreError("stockpiletime", p.Float64),
-			Targetable:               IgnoreError("targetable", p.Int),
-			Interceptor:              IgnoreError("interceptor", p.Int),
-			InterceptedByShieldType:  IgnoreError("interceptedbyshieldtype", p.Int64),
+			Targetable:               IgnoreError("targetable", p.Int64),
+			Interceptor:              IgnoreError("interceptor", p.Int64),
+			InterceptedByShieldType:  IgnoreError("interceptedbyshieldtype", p.Int6464),
 			Coverage:                 IgnoreError("coverage", p.Float64),
 			InterceptSolo:            IgnoreError("interceptsolo", p.Bool),
 			DynDamageInverted:        IgnoreError("dyndamageinverted", p.Bool),
@@ -462,8 +462,8 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 			CameraShake:              IgnoreError("camerashake", p.Float64),
 			SmokeTrail:               IgnoreError("smoketrail", p.Bool),
 			SmokeTrailCastShadow:     IgnoreError("smoketrailcastshadow", p.Bool),
-			SmokePeriod:              IgnoreError("smokeperiod", p.Int),
-			SmokeTime:                IgnoreError("smoketime", p.Int),
+			SmokePeriod:              IgnoreError("smokeperiod", p.Int64),
+			SmokeTime:                IgnoreError("smoketime", p.Int64),
 			SmokeSize:                IgnoreError("smokesize", p.Float64),
 			SmokeColor:               IgnoreError("smokecolor", p.Float64),
 			CastShadow:               IgnoreError("castshadow", p.Bool),
@@ -471,8 +471,8 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 			AlphaDecay:               IgnoreError("alphadecay", p.Float64),
 			Separation:               IgnoreError("separation", p.Float64),
 			NoGap:                    IgnoreError("nogap", p.Bool),
-			Stages:                   IgnoreError("stages", p.Int),
-			LodDistance:              IgnoreError("loddistance", p.Int),
+			Stages:                   IgnoreError("stages", p.Int64),
+			LodDistance:              IgnoreError("loddistance", p.Int64),
 			Thickness:                IgnoreError("thickness", p.Float64),
 			CoreThickness:            IgnoreError("corethickness", p.Float64),
 			LaserFlareSize:           IgnoreError("laserflaresize", p.Float64),

@@ -31,7 +31,7 @@ type (
 	WeaponDef struct {
 		Name                     string
 		WeaponType               WeaponType
-		Id                       int
+		Id                       int64
 		CustomParams             map[string]string
 		AvoidFriendly            bool
 		AvoidFeature             bool
@@ -60,13 +60,13 @@ type (
 		Weaponacceleration       float64
 		ReloadTime               float64
 		BurstRate                float64
-		Burst                    int
-		Projectiles              int
+		Burst                    int64
+		Projectiles              int64
 		WaterBounce              bool
 		GroundBounce             bool
 		BounceSlip               float64
 		BounceRebound            float64
-		NumBounce                int
+		NumBounce                int64
 		ImpulseFactor            float64
 		ImpulseBoost             float64
 		CraterMult               float64
@@ -84,7 +84,7 @@ type (
 		FixedLauncher            bool
 		Tolerance                float64
 		Firetolerance            float64
-		HighTrajectory           int
+		HighTrajectory           int64
 		TrajectoryHeight         float64
 		Tracks                   bool
 		Wobble                   float64
@@ -110,7 +110,7 @@ type (
 		Duration                 float64
 		Beamtime                 float64
 		Beamburst                bool
-		BeamTTL                  int
+		BeamTTL                  int64
 		SweepFire                bool
 		LargeBeamLaser           bool
 		SizeGrowth               float64
@@ -119,10 +119,10 @@ type (
 		EnergyPerShot            float64
 		FireStarter              float64
 		Paralyzer                bool
-		ParalyzeTime             int
+		ParalyzeTime             int64
 		Stockpile                bool
 		StockpileTime            float64
-		Targetable               int
+		Targetable               int64
 		Interceptor              int
 		InterceptedByShieldType  int64
 		Coverage                 float64
@@ -150,8 +150,8 @@ type (
 		CameraShake              float64
 		SmokeTrail               bool
 		SmokeTrailCastShadow     bool
-		SmokePeriod              int
-		SmokeTime                int
+		SmokePeriod              int64
+		SmokeTime                int64
 		SmokeSize                float64
 		SmokeColor               float64
 		CastShadow               bool
@@ -159,8 +159,8 @@ type (
 		AlphaDecay               float64
 		Separation               float64
 		NoGap                    bool
-		Stages                   int
-		LodDistance              int
+		Stages                   int64
+		LodDistance              int64
 		Thickness                float64
 		CoreThickness            float64
 		LaserFlareSize           float64
@@ -191,17 +191,17 @@ type (
 	}
 	UnitProperties struct {
 		Ref            UnitRef
-		MetalCost      int
-		EnergyCost     int
-		Buildtime      int
+		MetalCost      int64
+		EnergyCost     int64
+		Buildtime      int64
 		BuildOptions   []UnitRef
-		Health         int
-		SightDistance  int
+		Health         int64
+		SightDistance  int64
 		Speed          float64
-		Buildpower     int
-		SonarDistance  int
-		RadarDistance  int
-		JammerDistance int
+		Buildpower     int64
+		SonarDistance  int64
+		RadarDistance  int64
+		JammerDistance int64
 		WeaponDefs     []WeaponDef
 		CustomParams   CustomParams
 	}

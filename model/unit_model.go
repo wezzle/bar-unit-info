@@ -159,7 +159,7 @@ func (m *Unit) RenderBar(labelWidth int, label string, progress string, maxValue
 	return padding.Render(lipgloss.JoinHorizontal(lipgloss.Top, bar...))
 }
 
-func (m *Unit) PercentageWithBase(value int, base float64) float64 {
+func (m *Unit) PercentageWithBase(value int64, base float64) float64 {
 	return m.PercentageWithBaseF(float64(value), base)
 }
 
@@ -189,31 +189,31 @@ func (m *Unit) View() string {
 
 	d := time.Second * time.Duration(m.properties.Buildtime/100)
 	stats := [][]string{
-		{"Metal cost", m.metalCost.ViewAs(m.PercentageWithBase(m.properties.MetalCost, m.baseValues.MetalCost)), strconv.Itoa(m.properties.MetalCost)},
-		{"Energy cost", m.energyCost.ViewAs(m.PercentageWithBase(m.properties.EnergyCost, m.baseValues.EnergyCost)), strconv.Itoa(m.properties.EnergyCost)},
+		{"Metal cost", m.metalCost.ViewAs(m.PercentageWithBase(m.properties.MetalCost, m.baseValues.MetalCost)), strconv.FormatInt(m.properties.MetalCost, 10)},
+		{"Energy cost", m.energyCost.ViewAs(m.PercentageWithBase(m.properties.EnergyCost, m.baseValues.EnergyCost)), strconv.FormatInt(m.properties.EnergyCost, 10)},
 		{"Buildtime", m.buildtime.ViewAs(m.PercentageWithBase(m.properties.Buildtime, m.baseValues.Buildtime)), d.String()},
-		{"Health", m.health.ViewAs(m.PercentageWithBase(m.properties.Health, m.baseValues.Health)), strconv.Itoa(m.properties.Health)},
-		{"Speed", m.speed.ViewAs(m.PercentageWithBaseF(m.properties.Speed, m.baseValues.Speed)), strconv.Itoa(m.properties.SightDistance)},
-		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, m.baseValues.SightDistance)), strconv.Itoa(m.properties.SightDistance)},
+		{"Health", m.health.ViewAs(m.PercentageWithBase(m.properties.Health, m.baseValues.Health)), strconv.FormatInt(m.properties.Health, 10)},
+		{"Speed", m.speed.ViewAs(m.PercentageWithBaseF(m.properties.Speed, m.baseValues.Speed)), strconv.FormatInt(m.properties.SightDistance, 10)},
+		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, m.baseValues.SightDistance)), strconv.FormatInt(m.properties.SightDistance, 10)},
 	}
 
 	if m.properties.RadarDistance != 0 {
-		stats = append(stats, []string{"Radar range", m.radarRange.ViewAs(m.PercentageWithBase(m.properties.RadarDistance, m.baseValues.RadarDistance)), strconv.Itoa(m.properties.RadarDistance)})
+		stats = append(stats, []string{"Radar range", m.radarRange.ViewAs(m.PercentageWithBase(m.properties.RadarDistance, m.baseValues.RadarDistance)), strconv.FormatInt(m.properties.RadarDistance, 10)})
 	}
 	if m.properties.JammerDistance != 0 {
-		stats = append(stats, []string{"Jammer range", m.jammerRange.ViewAs(m.PercentageWithBase(m.properties.JammerDistance, m.baseValues.JammerDistance)), strconv.Itoa(m.properties.JammerDistance)})
+		stats = append(stats, []string{"Jammer range", m.jammerRange.ViewAs(m.PercentageWithBase(m.properties.JammerDistance, m.baseValues.JammerDistance)), strconv.FormatInt(m.properties.JammerDistance, 10)})
 	}
 	if m.properties.SonarDistance != 0 {
-		stats = append(stats, []string{"Sonar range", m.sonarRange.ViewAs(m.PercentageWithBase(m.properties.SonarDistance, m.baseValues.SonarDistance)), strconv.Itoa(m.properties.SonarDistance)})
+		stats = append(stats, []string{"Sonar range", m.sonarRange.ViewAs(m.PercentageWithBase(m.properties.SonarDistance, m.baseValues.SonarDistance)), strconv.FormatInt(m.properties.SonarDistance, 10)})
 	}
 	if m.properties.Buildpower != 0 {
-		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(m.properties.Buildpower, m.baseValues.Buildpower)), strconv.Itoa(m.properties.Buildpower)})
+		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(m.properties.Buildpower, m.baseValues.Buildpower)), strconv.FormatInt(m.properties.Buildpower, 10)})
 	}
 
 	weaponStats := [][]string{
 		{"Weapons", weaponStyle.Render(m.properties.SummarizeWeaponTypes()), ""},
-		{"DPS", m.weaponDps.ViewAs(m.PercentageWithBase(int(math.Round(m.properties.DPS())), m.baseValues.DPS)), strconv.Itoa(int(math.Round(m.properties.DPS())))},
-		{"Weapon range", m.weaponRange.ViewAs(m.PercentageWithBase(int(m.properties.MaxWeaponRange()), m.baseValues.WeaponRange)), strconv.Itoa(int(m.properties.MaxWeaponRange()))},
+		{"DPS", m.weaponDps.ViewAs(m.PercentageWithBase(int64(math.Round(m.properties.DPS())), m.baseValues.DPS)), strconv.Itoa(int(math.Round(m.properties.DPS())))},
+		{"Weapon range", m.weaponRange.ViewAs(m.PercentageWithBase(int64(m.properties.MaxWeaponRange()), m.baseValues.WeaponRange)), strconv.Itoa(int(m.properties.MaxWeaponRange()))},
 	}
 
 	allStats := append(stats, weaponStats...)
