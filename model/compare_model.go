@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/wezzle/bar-unit-info/gamedata"
 	"golang.org/x/term"
 )
 
@@ -48,9 +49,30 @@ func NewCompareModel(mainModel *MainModel, refs ...string) CompareModel {
 		UnitModels: make([]*Unit, 0),
 	}
 
+	// Calculate base percentages
+	bv := &BaseValues{}
+	for _, r := range refs {
+		up, ok := gamedata.GetUnitPropertiesByRef(r)
+		if !ok {
+			continue
+		}
+		bv.MetalCost = max(bv.MetalCost, float64(up.MetalCost)/100)
+		bv.EnergyCost = max(bv.EnergyCost, float64(up.EnergyCost)/100)
+		bv.Buildtime = max(bv.Buildtime, float64(up.Buildtime)/100)
+		bv.Health = max(bv.Health, float64(up.Health)/100)
+		bv.Speed = max(bv.Speed, float64(up.Speed)/100)
+		bv.SightDistance = max(bv.SightDistance, float64(up.SightDistance)/100)
+		bv.RadarDistance = max(bv.RadarDistance, float64(up.RadarDistance)/100)
+		bv.JammerDistance = max(bv.JammerDistance, float64(up.JammerDistance)/100)
+		bv.SonarDistance = max(bv.SonarDistance, float64(up.SonarDistance)/100)
+		bv.Buildpower = max(bv.Buildpower, float64(up.Buildpower)/100)
+		bv.DPS = max(bv.DPS, up.DPS()/100)
+		bv.WeaponRange = max(bv.WeaponRange, up.MaxWeaponRange()/100)
+	}
+
 	components := make([]string, 0)
 	for _, r := range refs {
-		um := NewUnitModel(r, mainModel)
+		um := NewUnitModel(r, mainModel, bv)
 		m.UnitModels = append(m.UnitModels, um)
 		components = append(components, paddingStyle.Render(um.View()))
 	}

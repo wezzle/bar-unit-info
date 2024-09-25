@@ -37,9 +37,25 @@ var (
 		"Cortex": "124",
 		"Legion": "34",
 	}
+	defaultBaseValues = map[string]float64{}
 )
 
-func NewUnitModel(ref types.UnitRef, mainModel *MainModel) *Unit {
+type BaseValues struct {
+	MetalCost      float64
+	EnergyCost     float64
+	Buildtime      float64
+	Health         float64
+	Speed          float64
+	SightDistance  float64
+	RadarDistance  float64
+	JammerDistance float64
+	SonarDistance  float64
+	Buildpower     float64
+	DPS            float64
+	WeaponRange    float64
+}
+
+func NewUnitModel(ref types.UnitRef, mainModel *MainModel, baseValues *BaseValues) *Unit {
 	m := Unit{}
 	m.ref = ref
 	m.mainModel = mainModel
@@ -50,6 +66,22 @@ func NewUnitModel(ref types.UnitRef, mainModel *MainModel) *Unit {
 	if !ok {
 		panic("unit properties file not generated")
 	}
+
+	if baseValues == nil {
+		baseValues = &BaseValues{
+			MetalCost:      250,
+			EnergyCost:     900,
+			Buildtime:      1000,
+			Health:         150,
+			Speed:          1.5,
+			SightDistance:  35,
+			RadarDistance:  35,
+			JammerDistance: 10,
+			SonarDistance:  35,
+			Buildpower:     3,
+		}
+	}
+	m.baseValues = baseValues
 
 	m.faction = util.FactionForRef(ref)
 	m.metalCost = progress.New(progress.WithSolidFill("#383C3F"), progress.WithoutPercentage())
@@ -91,6 +123,8 @@ type Unit struct {
 	sonarRange  progress.Model
 	weaponDps   progress.Model
 	weaponRange progress.Model
+
+	baseValues *BaseValues
 }
 
 func (m *Unit) Init() tea.Cmd {
@@ -155,31 +189,31 @@ func (m *Unit) View() string {
 
 	d := time.Second * time.Duration(m.properties.Buildtime/100)
 	stats := [][]string{
-		{"Metal cost", m.metalCost.ViewAs(m.PercentageWithBase(m.properties.MetalCost, 250)), strconv.Itoa(m.properties.MetalCost)},
-		{"Energy cost", m.energyCost.ViewAs(m.PercentageWithBase(m.properties.EnergyCost, 900)), strconv.Itoa(m.properties.EnergyCost)},
-		{"Buildtime", m.buildtime.ViewAs(m.PercentageWithBase(m.properties.Buildtime, 1000)), d.String()},
-		{"Health", m.health.ViewAs(m.PercentageWithBase(m.properties.Health, 150)), strconv.Itoa(m.properties.Health)},
-		{"Speed", m.speed.ViewAs(m.PercentageWithBaseF(m.properties.Speed, 1.5)), strconv.Itoa(m.properties.SightDistance)},
-		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, 35)), strconv.Itoa(m.properties.SightDistance)},
+		{"Metal cost", m.metalCost.ViewAs(m.PercentageWithBase(m.properties.MetalCost, m.baseValues.MetalCost)), strconv.Itoa(m.properties.MetalCost)},
+		{"Energy cost", m.energyCost.ViewAs(m.PercentageWithBase(m.properties.EnergyCost, m.baseValues.EnergyCost)), strconv.Itoa(m.properties.EnergyCost)},
+		{"Buildtime", m.buildtime.ViewAs(m.PercentageWithBase(m.properties.Buildtime, m.baseValues.Buildtime)), d.String()},
+		{"Health", m.health.ViewAs(m.PercentageWithBase(m.properties.Health, m.baseValues.Health)), strconv.Itoa(m.properties.Health)},
+		{"Speed", m.speed.ViewAs(m.PercentageWithBaseF(m.properties.Speed, m.baseValues.Speed)), strconv.Itoa(m.properties.SightDistance)},
+		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, m.baseValues.SightDistance)), strconv.Itoa(m.properties.SightDistance)},
 	}
 
 	if m.properties.RadarDistance != 0 {
-		stats = append(stats, []string{"Radar range", m.radarRange.ViewAs(m.PercentageWithBase(m.properties.RadarDistance, 35)), strconv.Itoa(m.properties.RadarDistance)})
+		stats = append(stats, []string{"Radar range", m.radarRange.ViewAs(m.PercentageWithBase(m.properties.RadarDistance, m.baseValues.RadarDistance)), strconv.Itoa(m.properties.RadarDistance)})
 	}
 	if m.properties.JammerDistance != 0 {
-		stats = append(stats, []string{"Jammer range", m.jammerRange.ViewAs(m.PercentageWithBase(m.properties.JammerDistance, 10)), strconv.Itoa(m.properties.JammerDistance)})
+		stats = append(stats, []string{"Jammer range", m.jammerRange.ViewAs(m.PercentageWithBase(m.properties.JammerDistance, m.baseValues.JammerDistance)), strconv.Itoa(m.properties.JammerDistance)})
 	}
 	if m.properties.SonarDistance != 0 {
-		stats = append(stats, []string{"Sonar range", m.sonarRange.ViewAs(m.PercentageWithBase(m.properties.SonarDistance, 35)), strconv.Itoa(m.properties.SonarDistance)})
+		stats = append(stats, []string{"Sonar range", m.sonarRange.ViewAs(m.PercentageWithBase(m.properties.SonarDistance, m.baseValues.SonarDistance)), strconv.Itoa(m.properties.SonarDistance)})
 	}
 	if m.properties.Buildpower != 0 {
-		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(m.properties.Buildpower, 3)), strconv.Itoa(m.properties.Buildpower)})
+		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(m.properties.Buildpower, m.baseValues.Buildpower)), strconv.Itoa(m.properties.Buildpower)})
 	}
 
 	weaponStats := [][]string{
 		{"Weapons", weaponStyle.Render(m.properties.SummarizeWeaponTypes()), ""},
-		{"DPS", m.weaponDps.ViewAs(m.PercentageWithBase(int(math.Round(m.properties.DPS())), 15)), strconv.Itoa(int(math.Round(m.properties.DPS())))},
-		{"Weapon range", m.weaponRange.ViewAs(m.PercentageWithBase(int(m.properties.MaxWeaponRange()), 20)), strconv.Itoa(int(m.properties.MaxWeaponRange()))},
+		{"DPS", m.weaponDps.ViewAs(m.PercentageWithBase(int(math.Round(m.properties.DPS())), m.baseValues.DPS)), strconv.Itoa(int(math.Round(m.properties.DPS())))},
+		{"Weapon range", m.weaponRange.ViewAs(m.PercentageWithBase(int(m.properties.MaxWeaponRange()), m.baseValues.WeaponRange)), strconv.Itoa(int(m.properties.MaxWeaponRange()))},
 	}
 
 	allStats := append(stats, weaponStats...)

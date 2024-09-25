@@ -472,7 +472,7 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return NewCompareModel(m.mainModel, m.selectedRows...), cmd
 			}
-			return NewUnitModel(m.Table.SelectedRow()[0], m.mainModel), cmd
+			return NewUnitModel(m.Table.SelectedRow()[0], m.mainModel, nil), cmd
 		case key.Matches(msg, tableKeys.Left):
 			s := max(m.SelectedCol-1, 0)
 			selectedCol = &s
