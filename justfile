@@ -1,3 +1,6 @@
+start: && run
+  go generate ./...
+
 bar-repo:
   #!/usr/bin/env bash
   unlink bar-repo || true
