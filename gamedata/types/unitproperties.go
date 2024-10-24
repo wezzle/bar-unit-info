@@ -71,3 +71,7 @@ func (p *UnitProperties) DPS() float64 {
 	}
 	return dps
 }
+
+func (p *UnitProperties) IsBuilding() bool {
+	return p.Speed == 0
+}

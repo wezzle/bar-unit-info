@@ -6,4 +6,20 @@ func GetUnitGrid() types.UnitGrid {
 	return unitGridData
 }
 
+func IsBuiltByUnits(ref types.UnitRef) map[types.Constructor][]int {
+     filtered := make(map[types.Constructor][]int)
+     for constructor, group := range unitGridData {
+        for rowIndex, row := range group {
+            for colIndex, col := range row {
+                for bRefIndex, bRef := range col {
+                    if bRef == ref {
+                        filtered[constructor] = []int{rowIndex, colIndex, bRefIndex}
+                    }
+                }
+            }
+        }
+    }
+    return filtered
+}
+
 var unitGridData types.UnitGrid = {{.Var}}
