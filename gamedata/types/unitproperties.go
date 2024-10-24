@@ -53,7 +53,9 @@ func (p *UnitProperties) DPS() float64 {
 	// LaserCannon
 	//
 	//
-	// TODO check beamlaser calculation for legbastion, leginc seems to work fine
+	// Sweepfire (Legion heatguns)
+	// unitDefInfo[unitDefID].maxdps = (weaponDef.damages[0] * weaponDef.customParams.sweepfire) / math.max(weaponDef.minIntensity, 0.5)
+	// unitDefInfo[unitDefID].mindps = weaponDef.damages[0] * weaponDef.customParams.sweepfire
 	dps := 0.0
 
 	for _, weapon := range p.Weapons {
@@ -73,6 +75,25 @@ func (p *UnitProperties) DPS() float64 {
 
 		if damage == 0 {
 			continue
+		}
+
+		if sweepFire, exists := wd.CustomParams["sweepfire"]; exists {
+			var sweepFireValue float64
+			switch v := sweepFire.(type) {
+			case float64:
+				sweepFireValue = v
+			case float32:
+				sweepFireValue = float64(v)
+			case int64:
+				sweepFireValue = float64(v)
+			case int:
+				sweepFireValue = float64(v)
+			}
+
+			if sweepFireValue != 0 {
+				dps = dps + (damage * sweepFireValue)
+				continue
+			}
 		}
 
 		damage = damage / wd.ReloadTime

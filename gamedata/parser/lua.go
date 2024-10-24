@@ -365,7 +365,7 @@ func ParseWeaponDefs(data *lua.LTable) map[string]types.WeaponDef {
 			Name:                     IgnoreError("name", p.String),
 			WeaponType:               IgnoreError("weapontype", p.String),
 			Id:                       IgnoreError("id", p.Int64),
-			CustomParams:             map[string]string{},
+			CustomParams:             make(map[string]interface{}),
 			AvoidFriendly:            IgnoreError("avoidfriendly", p.Bool),
 			AvoidFeature:             IgnoreError("avoidfeature", p.Bool),
 			AvoidNeutral:             IgnoreError("avoidneutral", p.Bool),
@@ -518,6 +518,21 @@ func ParseWeaponDefs(data *lua.LTable) map[string]types.WeaponDef {
 			SoundHitDryVolume:        IgnoreError("soundhitdryvolume", p.Float64),
 			SoundHitWetVolume:        IgnoreError("soundhitwetvolume", p.Float64),
 		}
+
+		customParams := IgnoreError("customparams", p.Table)
+		if customParams != nil {
+			customParams.data.ForEach(func(k lua.LValue, v lua.LValue) {
+				if v.Type() != lua.LTNumber && v.Type() != lua.LTString {
+					return
+				}
+				customParamValue, err := strconv.ParseFloat(v.String(), 64)
+				if err != nil {
+					return
+				}
+				def.CustomParams[k.String()] = customParamValue
+			})
+		}
+
 		damage := IgnoreError("damage", p.Table)
 		damage.data.ForEach(func(k lua.LValue, v lua.LValue) {
 			if v.Type() != lua.LTNumber && v.Type() != lua.LTString {

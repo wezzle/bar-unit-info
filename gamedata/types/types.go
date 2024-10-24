@@ -38,7 +38,7 @@ type (
 		Name                     string
 		WeaponType               WeaponType
 		Id                       int64
-		CustomParams             map[string]string
+		CustomParams             map[string]interface{}
 		AvoidFriendly            bool
 		AvoidFeature             bool
 		AvoidNeutral             bool
