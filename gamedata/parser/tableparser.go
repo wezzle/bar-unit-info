@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -18,6 +19,17 @@ func (p *LuaTableParser) String(key string) (s string, err error) {
 		return
 	}
 	s = v.String()
+	return
+}
+
+func (p *LuaTableParser) ListString(key string) (s []string, err error) {
+	v := p.data.RawGetString(key)
+	if v.Type() != lua.LTString {
+		err = fmt.Errorf("incorrect lua type, expected 'LTString' but got '%s'", v.Type())
+		return
+	}
+	list := v.String()
+	s = strings.Split(list, " ")
 	return
 }
 

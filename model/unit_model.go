@@ -123,6 +123,14 @@ type Unit struct {
 	sonarRange  progress.Model
 	weaponDps   progress.Model
 	weaponRange progress.Model
+	// TODO
+	// Add metalPerShot
+	// add energyPerShot
+	// TODO
+	// paralyzer
+	// TODO
+	// stockpile
+	// stockpileTime
 
 	baseValues *BaseValues
 }
@@ -181,7 +189,7 @@ func (m *Unit) View() string {
 		Background(lipgloss.Color("57")).
 		Foreground(lipgloss.Color("230")).
 		Padding(0, 1).
-		Render(m.name))
+		Render(fmt.Sprintf("%s (%s)", m.name, m.ref)))
 	sections = append(sections, lipgloss.JoinHorizontal(lipgloss.Top, titleRow...))
 
 	description := descriptionStyle.Render(m.description)

@@ -11,11 +11,9 @@ type (
 	Lab                 = UnitRef
 	LabGrid             map[Lab]GridRow
 	WeaponType          = string
-	Damage              struct {
-		Default float64
-	}
-	ScarIndices struct{}
-	Shield      struct {
+	Damage              map[string]float64
+	ScarIndices         struct{}
+	Shield              struct {
 		Repulser         bool
 		Smart            bool
 		Exterior         bool
@@ -27,6 +25,14 @@ type (
 		PowerRegen       float64
 		PowerRegenEnergy float64
 		EnergyUse        float64
+	}
+	Weapon struct {
+		BadTargetCategory   []string
+		Def                 string
+		OnlyTargetCategory  string
+		FastAutoRetargeting bool
+		MaxAngleDif         int64
+		MainDir             string
 	}
 	WeaponDef struct {
 		Name                     string
@@ -202,7 +208,8 @@ type (
 		SonarDistance  int64
 		RadarDistance  int64
 		JammerDistance int64
-		WeaponDefs     []WeaponDef
+		WeaponDefs     map[string]WeaponDef
+		Weapons        []Weapon
 		CustomParams   CustomParams
 	}
 	Translations struct {

@@ -257,6 +257,7 @@ func parseUnitProperties(luaContent string, ref string) (*types.UnitProperties, 
 
 	properties.BuildOptions = buildOptions
 	properties.CustomParams = customParams
+	properties.Weapons = ParseWeapons(data)
 	properties.WeaponDefs = ParseWeaponDefs(data)
 
 	return &properties, nil
@@ -327,8 +328,31 @@ func fixTechLevel(unitProperties []types.UnitProperties, labGrid types.LabGrid) 
 	return fixedUnitProperties
 }
 
-func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
-	defs := make([]types.WeaponDef, 0)
+func ParseWeapons(data *lua.LTable) []types.Weapon {
+	weapons := make([]types.Weapon, 0)
+	w := data.RawGetString("weapons")
+	if w.Type() != lua.LTTable {
+		return nil
+	}
+	w.(*lua.LTable).ForEach(func(k lua.LValue, v lua.LValue) {
+		vT := v.(*lua.LTable)
+		p := LuaTableParser{vT}
+
+		weapon := types.Weapon{
+			BadTargetCategory:   IgnoreError("badtargetcategory", p.ListString),
+			OnlyTargetCategory:  IgnoreError("onlytargetcategory", p.String),
+			Def:                 IgnoreError("def", p.String),
+			MainDir:             IgnoreError("maindir", p.String),
+			MaxAngleDif:         IgnoreError("maxangledif", p.Int64),
+			FastAutoRetargeting: IgnoreError("fastautoretargeting", p.Bool),
+		}
+		weapons = append(weapons, weapon)
+	})
+	return weapons
+}
+
+func ParseWeaponDefs(data *lua.LTable) map[string]types.WeaponDef {
+	defs := make(map[string]types.WeaponDef, 0)
 	wd := data.RawGetString("weapondefs")
 	if wd.Type() != lua.LTTable {
 		return nil
@@ -337,28 +361,25 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 	wd.(*lua.LTable).ForEach(func(k lua.LValue, v lua.LValue) {
 		vT := v.(*lua.LTable)
 		p := LuaTableParser{vT}
-		damage := IgnoreError("damage", p.Table)
 		def := types.WeaponDef{
-			Name:             IgnoreError("name", p.String),
-			WeaponType:       IgnoreError("weapontype", p.String),
-			Id:               IgnoreError("id", p.Int64),
-			CustomParams:     map[string]string{},
-			AvoidFriendly:    IgnoreError("avoidfriendly", p.Bool),
-			AvoidFeature:     IgnoreError("avoidfeature", p.Bool),
-			AvoidNeutral:     IgnoreError("avoidneutral", p.Bool),
-			AvoidGround:      IgnoreError("avoidground", p.Bool),
-			AvoidCloaked:     IgnoreError("avoidcloaked", p.Bool),
-			CollideEnemy:     IgnoreError("collideenemy", p.Bool),
-			CollideFriendly:  IgnoreError("collidefriendly", p.Bool),
-			CollideFeature:   IgnoreError("collidefeature", p.Bool),
-			CollideNeutral:   IgnoreError("collideneutral", p.Bool),
-			CollideFireBase:  IgnoreError("collidefirebase", p.Bool),
-			CollideNonTarget: IgnoreError("collidenontarget", p.Bool),
-			CollideGround:    IgnoreError("collideground", p.Bool),
-			CollideCloaked:   IgnoreError("collidecloaked", p.Bool),
-			Damage: types.Damage{
-				Default: IgnoreError("default", damage.Float64),
-			},
+			Name:                     IgnoreError("name", p.String),
+			WeaponType:               IgnoreError("weapontype", p.String),
+			Id:                       IgnoreError("id", p.Int64),
+			CustomParams:             map[string]string{},
+			AvoidFriendly:            IgnoreError("avoidfriendly", p.Bool),
+			AvoidFeature:             IgnoreError("avoidfeature", p.Bool),
+			AvoidNeutral:             IgnoreError("avoidneutral", p.Bool),
+			AvoidGround:              IgnoreError("avoidground", p.Bool),
+			AvoidCloaked:             IgnoreError("avoidcloaked", p.Bool),
+			CollideEnemy:             IgnoreError("collideenemy", p.Bool),
+			CollideFriendly:          IgnoreError("collidefriendly", p.Bool),
+			CollideFeature:           IgnoreError("collidefeature", p.Bool),
+			CollideNeutral:           IgnoreError("collideneutral", p.Bool),
+			CollideFireBase:          IgnoreError("collidefirebase", p.Bool),
+			CollideNonTarget:         IgnoreError("collidenontarget", p.Bool),
+			CollideGround:            IgnoreError("collideground", p.Bool),
+			CollideCloaked:           IgnoreError("collidecloaked", p.Bool),
+			Damage:                   make(map[string]float64),
 			ExplosionSpeed:           IgnoreError("explosionspeed", p.Float64),
 			ImpactOnly:               IgnoreError("impactonly", p.Bool),
 			NoSelfDamage:             IgnoreError("noselfdamage", p.Bool),
@@ -497,7 +518,18 @@ func ParseWeaponDefs(data *lua.LTable) []types.WeaponDef {
 			SoundHitDryVolume:        IgnoreError("soundhitdryvolume", p.Float64),
 			SoundHitWetVolume:        IgnoreError("soundhitwetvolume", p.Float64),
 		}
-		defs = append(defs, def)
+		damage := IgnoreError("damage", p.Table)
+		damage.data.ForEach(func(k lua.LValue, v lua.LValue) {
+			if v.Type() != lua.LTNumber && v.Type() != lua.LTString {
+				return
+			}
+			damageValue, err := strconv.ParseFloat(v.String(), 64)
+			if err != nil {
+				return
+			}
+			def.Damage[k.String()] = damageValue
+		})
+		defs[k.String()] = def
 	})
 	return defs
 }
