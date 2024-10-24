@@ -489,7 +489,7 @@ func (m *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			s := max(m.SelectedCol-1, 0)
 			selectedCol = &s
 		case key.Matches(msg, tableKeys.Right):
-			s := min(m.SelectedCol+1, len(m.Table.Columns()))
+			s := min(m.SelectedCol+1, len(m.Table.Columns())-1)
 			selectedCol = &s
 		case key.Matches(msg, tableKeys.ToggleSort):
 			sortCol = &m.SelectedCol
