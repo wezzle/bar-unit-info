@@ -52,6 +52,9 @@ type BaseValues struct {
 	SonarDistance  float64
 	Buildpower     float64
 	DPS            float64
+	EPS            float64
+	MPS            float64
+	ParalyzeTime   float64
 	WeaponRange    float64
 }
 
@@ -79,6 +82,9 @@ func NewUnitModel(ref types.UnitRef, mainModel *MainModel, baseValues *BaseValue
 			JammerDistance: 10,
 			SonarDistance:  35,
 			Buildpower:     3,
+			EPS:            250,
+			MPS:            250,
+			ParalyzeTime:   35,
 		}
 	}
 	m.baseValues = baseValues
@@ -97,6 +103,9 @@ func NewUnitModel(ref types.UnitRef, mainModel *MainModel, baseValues *BaseValue
 
 	m.weaponDps = progress.New(progress.WithSolidFill("#cc0000"), progress.WithoutPercentage())
 	m.weaponRange = progress.New(progress.WithSolidFill("#c3807f"), progress.WithoutPercentage())
+	m.weaponEps = progress.New(progress.WithSolidFill("#9E6802"), progress.WithoutPercentage())
+	m.weaponMps = progress.New(progress.WithSolidFill("#383C3F"), progress.WithoutPercentage())
+	m.weaponParalyzeTime = progress.New(progress.WithSolidFill("#1175AE"), progress.WithoutPercentage())
 
 	return &m
 }
@@ -111,21 +120,21 @@ type Unit struct {
 	mainModel *MainModel
 
 	// Stats
-	metalCost   progress.Model
-	energyCost  progress.Model
-	buildtime   progress.Model
-	health      progress.Model
-	sightRange  progress.Model
-	speed       progress.Model
-	buildpower  progress.Model
-	radarRange  progress.Model
-	jammerRange progress.Model
-	sonarRange  progress.Model
-	weaponDps   progress.Model
-	weaponRange progress.Model
-	// TODO
-	// Add metalPerShot
-	// add energyPerShot
+	metalCost          progress.Model
+	energyCost         progress.Model
+	buildtime          progress.Model
+	health             progress.Model
+	sightRange         progress.Model
+	speed              progress.Model
+	buildpower         progress.Model
+	radarRange         progress.Model
+	jammerRange        progress.Model
+	sonarRange         progress.Model
+	weaponDps          progress.Model
+	weaponRange        progress.Model
+	weaponEps          progress.Model
+	weaponMps          progress.Model
+	weaponParalyzeTime progress.Model
 	// TODO
 	// paralyzer
 	// TODO
@@ -189,7 +198,13 @@ func (m *Unit) View() string {
 		Background(lipgloss.Color("57")).
 		Foreground(lipgloss.Color("230")).
 		Padding(0, 1).
-		Render(fmt.Sprintf("%s (%s)", m.name, m.ref)))
+		Margin(0, 4, 0, 0).
+		Render(m.name))
+	titleRow = append(titleRow, lipgloss.NewStyle().
+		Background(lipgloss.Color("236")).
+		Foreground(lipgloss.Color("246")).
+		Padding(0, 1).
+		Render(m.ref))
 	sections = append(sections, lipgloss.JoinHorizontal(lipgloss.Top, titleRow...))
 
 	description := descriptionStyle.Render(m.description)
@@ -218,10 +233,23 @@ func (m *Unit) View() string {
 		stats = append(stats, []string{"Buildpower", m.buildpower.ViewAs(m.PercentageWithBase(m.properties.Buildpower, m.baseValues.Buildpower)), strconv.FormatInt(m.properties.Buildpower, 10)})
 	}
 
+	ws := weaponStyle
+	if m.properties.ParalyzeTime() != 0.0 {
+		ws = ws.Foreground(lipgloss.Color("27"))
+	}
 	weaponStats := [][]string{
-		{"Weapons", weaponStyle.Render(m.properties.SummarizeWeaponTypes()), ""},
+		{"Weapons", ws.Render(m.properties.SummarizeWeaponTypes()), ""},
 		{"DPS", m.weaponDps.ViewAs(m.PercentageWithBase(int64(math.Round(m.properties.DPS())), m.baseValues.DPS)), strconv.Itoa(int(math.Round(m.properties.DPS())))},
 		{"Weapon range", m.weaponRange.ViewAs(m.PercentageWithBase(int64(m.properties.MaxWeaponRange()), m.baseValues.WeaponRange)), strconv.Itoa(int(m.properties.MaxWeaponRange()))},
+	}
+	if m.properties.MPS() != 0.0 {
+		weaponStats = append(weaponStats, []string{"Metal/s", m.weaponMps.ViewAs(m.PercentageWithBase(int64(math.Round(m.properties.MPS())), m.baseValues.MPS)), strconv.Itoa(int(math.Round(m.properties.MPS())))})
+	}
+	if m.properties.EPS() != 0.0 {
+		weaponStats = append(weaponStats, []string{"Energy/s", m.weaponEps.ViewAs(m.PercentageWithBase(int64(math.Round(m.properties.EPS())), m.baseValues.EPS)), strconv.Itoa(int(math.Round(m.properties.EPS())))})
+	}
+	if m.properties.ParalyzeTime() != 0.0 {
+		weaponStats = append(weaponStats, []string{"Paralyze time", m.weaponParalyzeTime.ViewAs(m.PercentageWithBase(int64(m.properties.ParalyzeTime()), m.baseValues.ParalyzeTime)), strconv.FormatInt(m.properties.ParalyzeTime(), 10)})
 	}
 
 	allStats := append(stats, weaponStats...)

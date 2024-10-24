@@ -73,6 +73,10 @@ func (p *UnitProperties) DPS() float64 {
 			continue
 		}
 
+		if wd.ParalyzeTime != 0 {
+			continue
+		}
+
 		if damage == 0 {
 			continue
 		}
@@ -107,6 +111,53 @@ func (p *UnitProperties) DPS() float64 {
 	}
 
 	return dps
+}
+
+func (p *UnitProperties) EPS() float64 {
+	eps := 0.0
+	for _, weapon := range p.Weapons {
+		wd, exists := p.WeaponDefs[strings.ToLower(weapon.Def)]
+		if !exists {
+			continue
+		}
+		if wd.EnergyPerShot == 0 {
+			continue
+		}
+		energy := wd.EnergyPerShot / wd.ReloadTime
+		eps = eps + energy
+	}
+	return eps
+}
+
+func (p *UnitProperties) MPS() float64 {
+	mps := 0.0
+	for _, weapon := range p.Weapons {
+		wd, exists := p.WeaponDefs[strings.ToLower(weapon.Def)]
+		if !exists {
+			continue
+		}
+		if wd.MetalPerShot == 0 {
+			continue
+		}
+		metal := wd.MetalPerShot / wd.ReloadTime
+		mps = mps + metal
+	}
+	return mps
+}
+
+func (p *UnitProperties) ParalyzeTime() int64 {
+	time := int64(0)
+	for _, weapon := range p.Weapons {
+		wd, exists := p.WeaponDefs[strings.ToLower(weapon.Def)]
+		if !exists {
+			continue
+		}
+		if wd.ParalyzeTime == 0 {
+			continue
+		}
+		time = time + wd.ParalyzeTime
+	}
+	return time
 }
 
 func (p *UnitProperties) IsBuilding() bool {

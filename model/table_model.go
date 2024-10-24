@@ -68,7 +68,7 @@ var (
 			Background(lipgloss.Color("#A550DF")).
 			Align(lipgloss.Right)
 
-	statusText = lipgloss.NewStyle().Inherit(statusBarStyle)
+	statusText = lipgloss.NewStyle().PaddingLeft(1).Inherit(statusBarStyle)
 
 	fishCakeStyle = statusNugget.Background(lipgloss.Color("#6124DF"))
 )
@@ -628,7 +628,7 @@ func (m *Table) View() string {
 		}
 		statusVal := statusText.
 			Width(m.tableWidth - w(fishCake)).
-			Render("")
+			Render(fmt.Sprintf("Unit count: %d", len(m.Table.Rows())))
 
 		bar := lipgloss.JoinHorizontal(lipgloss.Top,
 			statusVal,
