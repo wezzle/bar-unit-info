@@ -32,7 +32,7 @@
           "language/en"
           "luaui/configs"
         ];
-        hash = "sha256-M7XEEaCyd7Lk1QmcKBkNSlS8BqSJqEhOGwee+T9Hyes=";
+        hash = "sha256-XXlFn5Cz1VRn3Arx4VIS4exEigxILqbrl1s8ZcgqPKc=";
       };
   in {
     # Provide some binary packages for selected system types.
