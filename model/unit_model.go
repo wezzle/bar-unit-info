@@ -193,7 +193,7 @@ func (m *Unit) View() string {
 		{"Energy cost", m.energyCost.ViewAs(m.PercentageWithBase(m.properties.EnergyCost, m.baseValues.EnergyCost)), strconv.FormatInt(m.properties.EnergyCost, 10)},
 		{"Buildtime", m.buildtime.ViewAs(m.PercentageWithBase(m.properties.Buildtime, m.baseValues.Buildtime)), d.String()},
 		{"Health", m.health.ViewAs(m.PercentageWithBase(m.properties.Health, m.baseValues.Health)), strconv.FormatInt(m.properties.Health, 10)},
-		{"Speed", m.speed.ViewAs(m.PercentageWithBaseF(m.properties.Speed, m.baseValues.Speed)), strconv.FormatInt(m.properties.SightDistance, 10)},
+		{"Speed", m.speed.ViewAs(m.PercentageWithBaseF(m.properties.Speed, m.baseValues.Speed)), strconv.FormatFloat(m.properties.Speed, 'f', 1, 64)},
 		{"Sight range", m.sightRange.ViewAs(m.PercentageWithBase(m.properties.SightDistance, m.baseValues.SightDistance)), strconv.FormatInt(m.properties.SightDistance, 10)},
 	}
 
