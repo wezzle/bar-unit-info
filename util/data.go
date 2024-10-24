@@ -22,6 +22,9 @@ func DescriptionForRef(ref types.UnitRef) string {
 
 func FactionForRef(ref types.UnitRef) string {
 	shortcode := ref[0:3]
+	if shortcode == "lee" {
+		shortcode = "leg"
+	}
 	return gamedata.GetTranslations().Units.Factions[shortcode]
 }
 

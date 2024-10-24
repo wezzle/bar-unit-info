@@ -198,6 +198,7 @@ var tableKeys = TableKeyMap{
 func NewTableModel(mainModel *MainModel) Table {
 	columns := []ColumnWithType{
 		{Column: table.Column{Title: "Ref ▼ •", Width: 20}, Type: CTString},
+		{Column: table.Column{Title: "Faction", Width: 20}, Type: CTString},
 		{Column: table.Column{Title: "Name", Width: 30}, Type: CTString},
 		{Column: table.Column{Title: "Tech level", Width: 15}, Type: CTInt, PropertyKey: "techlevel"},
 		{Column: table.Column{Title: "Metal cost", Width: 15}, Type: CTInt64, PropertyKey: "metalcost"},
@@ -265,6 +266,7 @@ func NewTableModel(mainModel *MainModel) Table {
 		d := time.Second * time.Duration(up.Buildtime/100)
 		rows = append(rows, table.Row{
 			ref,
+			util.FactionForRef(ref),
 			util.NameForRef(ref),
 			fmt.Sprintf("T%d", up.CustomParams.TechLevel),
 			strconv.FormatInt(up.MetalCost, 10),
